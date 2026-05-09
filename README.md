@@ -22,13 +22,13 @@ OmniState AI transforms AI development from tedious coding into visual design. C
 ### **Key Highlights**
 
 - ✅ **Visual State Machine Editor** - Node-based workflow with drag-and-drop
-- ✅ **AAA Transition System** - 4-tab editor with cooldowns, delays, blending ⭐ NEW!
+- ✅ **AAA Transition System** - 4-tab editor with cooldowns, delays, blending 
 - ✅ **Professional Code Generation** - AAA-quality, well-structured scripts
-- ✅ **Advanced Conditions** - 3 modes + 9 quick presets + syntax highlighting ⭐ NEW!
-- ✅ **Priority System** - Control transition evaluation order (0-100) ⭐ ENHANCED!
-- ✅ **Timing Control** - Cooldowns and delays for realistic behavior ⭐ NEW!
-- ✅ **Animation Blending** - Smooth transitions between animations ⭐ NEW!
-- ✅ **Debug System** - Per-transition logging with colors ⭐ NEW!
+- ✅ **Advanced Conditions** - 3 modes + 9 quick presets + syntax highlighting 
+- ✅ **Priority System** - Control transition evaluation order (0-100)
+- ✅ **Timing Control** - Cooldowns and delays for realistic behavior 
+- ✅ **Animation Blending** - Smooth transitions between animations 
+- ✅ **Debug System** - Per-transition logging with colors 
 - ✅ **Blackboard Variables** - Shared data between states
 - ✅ **Animation Integration** - Auto-detect and assign animations
 - ✅ **State Templates** - Pre-built behaviors for rapid development
@@ -136,7 +136,7 @@ if owner.player:
     owner.bb_set("distance_to_player", distance)
 ```
 
-### **Step 5: Connect States with Advanced Transitions** ⭐ NEW!
+### **Step 5: Connect States with Advanced Transitions** 
 
 #### **Patrol → Chase Transition**
 1. Drag from **Patrol** (right blue dot) to **Chase** (left blue dot)
@@ -344,14 +344,14 @@ Professional transition configuration matching Unreal Engine 5/6:
   - Automatic sorting and evaluation
   - Helpful hints for best practices
   
-- **Cooldown System** ⭐ NEW!
+- **Cooldown System** 
   - Prevent rapid state switching
   - Duration: 0.1 - 60 seconds
   - Per-transition cooldown tracking
   - Prevents state "flickering"
   - Blackboard-based implementation
   
-- **Delay System** ⭐ NEW!
+- **Delay System** 
   - Add deliberate transition delays
   - Duration: 0.1 - 10 seconds
   - Condition must remain true during delay
@@ -359,20 +359,20 @@ Professional transition configuration matching Unreal Engine 5/6:
   - Reaction time simulation
 
 **Tab 3: Advanced**
-- **Interrupt Control** ⭐ NEW!
+- **Interrupt Control** 
   - Can/Cannot interrupt current state
   - Useful for animations that must complete
   - Prevents jarring mid-action transitions
   - State-level control
   
-- **Animation Blending** ⭐ NEW!
+- **Animation Blending** 
   - Smooth transitions between animations
   - Blend time: 0.0 - 2.0 seconds
   - Professional animation quality
   - No sudden animation pops
   - Automatic AnimationPlayer integration
   
-- **Custom Transition Code** ⭐ NEW!
+- **Custom Transition Code** 
   - Execute GDScript when transitioning
   - Play sounds, set variables, trigger events
   - Full code editor with syntax highlighting
@@ -380,13 +380,13 @@ Professional transition configuration matching Unreal Engine 5/6:
   - Access to owner, blackboard, states
 
 **Tab 4: Debug**
-- **Debug Logging** ⭐ NEW!
+- **Debug Logging** 
   - Enable per-transition logging
   - Custom debug labels
   - Track transition execution
   - Console output with timestamps
   
-- **Debug Colors** ⭐ NEW!
+- **Debug Colors** 
   - Assign colors to transitions
   - Color-coded console output
   - Visual identification in logs
@@ -421,7 +421,7 @@ Professional transition configuration matching Unreal Engine 5/6:
 - **Dropdown selection** - Choose per state
 - **Flexible paths** - Any AnimationPlayer location
 - **Automatic playback** - Plays on state enter
-- **Blend support** - Smooth animation transitions ⭐ NEW!
+- **Blend support** - Smooth animation transitions 
 - **Speed control** - Adjust animation speed
 
 ### **📋 State Templates**
@@ -449,8 +449,8 @@ Each template includes:
 - **Error handling** - Warnings and error messages
 - **Helper functions** - Utility methods included
 - **Organized sections** - Clear separation of concerns
-- **Advanced transition logic** - Cooldowns, delays, blending ⭐ NEW!
-- **Debug integration** - Logging code generation ⭐ NEW!
+- **Advanced transition logic** - Cooldowns, delays, blending 
+- **Debug integration** - Logging code generation 
 
 ### **✅ Validation System**
 - **State count** - Verify states exist
@@ -474,7 +474,7 @@ Each template includes:
 
 ## 📚 **Usage Examples**
 
-### **Example 1: Advanced Tactical Shooter AI** ⭐ NEW!
+### **Example 1: Advanced Tactical Shooter AI** 
 
 Complete AI with cooldowns, delays, and blending for realistic behavior.
 
@@ -755,7 +755,7 @@ owner.bb_set("reload_timer", reload_timer)
 
 ---
 
-### **Example 2: Boss Battle with Phases** ⭐ NEW!
+### **Example 2: Boss Battle with Phases** 
 
 Multi-phase boss with dramatic transitions and custom code.
 
@@ -817,7 +817,7 @@ owner.get_node("AudioPlayer").play("enrage_roar")
 
 ---
 
-### **Example 3: Stealth Game Guard** ⭐ NEW!
+### **Example 3: Stealth Game Guard** 
 
 Realistic guard AI with investigation and alert states.
 
@@ -975,19 +975,14 @@ res://ai_states/your_fsm_name/
 ## 📖 **Documentation**
 
 ### **Complete Guides**
-- **[README.md](README.md)** - This file - Complete documentation with v1.0.0 features
-- **[TRANSITION_SYSTEM.md](TRANSITION_SYSTEM.md)** - Advanced transition system guide ⭐ NEW!
-- **[WHATS_NEW_V1.1.md](WHATS_NEW_V1.1.md)** - v1.0.0 upgrade highlights ⭐ NEW!
-- **[BLACKBOARD_GUIDE.md](BLACKBOARD_GUIDE.md)** - Complete Blackboard tutorial ⭐ NEW!
-- **[QUICK_START_BLACKBOARD.md](QUICK_START_BLACKBOARD.md)** - 5-minute Blackboard guide ⭐ NEW!
+- **[TRANSITION_SYSTEM.md](TRANSITION_SYSTEM.md)** - Advanced transition system guide 
+- **[BLACKBOARD_GUIDE.md](BLACKBOARD_GUIDE.md)** - Complete Blackboard tutorial
+- **[QUICK_START_BLACKBOARD.md](QUICK_START_BLACKBOARD.md)** - 5-minute Blackboard guide
 - **[CHANGELOG.md](CHANGELOG.md)** - Version history and updates
 - **[QUICKSTART.md](QUICKSTART.md)** - 5-minute getting started guide
 - **[EXAMPLES.md](EXAMPLES.md)** - 4+ complete example state machines
-- **[FEATURES.md](FEATURES.md)** - Complete feature list (200+ features)
-- **[WORKING_FEATURES.md](WORKING_FEATURES.md)** - Current working features
-- **[ENHANCEMENTS_ROADMAP.md](ENHANCEMENTS_ROADMAP.md)** - Future plans
 
-### **New in v1.0.0** ⭐
+### **v1.0.0** ⭐
 - **[TRANSITION_SYSTEM.md](TRANSITION_SYSTEM.md)** - Complete guide to the AAA transition system
   - 4-tab editor walkthrough
   - All features explained with examples
@@ -996,15 +991,9 @@ res://ai_states/your_fsm_name/
   - Performance optimization tips
   - Comparison to Unreal Engine 5/6
 
-- **[WHATS_NEW_V1.1.md](WHATS_NEW_V1.1.md)** - What's new and improved
-  - Feature comparison table (v1.0 vs v1.1)
-  - Upgrade benefits
-  - Migration guide
-  - Quick reference
-
 ### **Quick Reference**
 
-#### **Transition System Features** ⭐ NEW!
+#### **Transition System Features**
 ```
 4-Tab Advanced Editor:
 ├── Conditions Tab
@@ -1159,7 +1148,7 @@ blackboard.get("path_blocked", true) == false
 - ✅ Syntax Highlighting
 - ✅ Enhanced Code Generation
 
-### **Version 1.2** (Planned - Q3 2026)
+### **Version 1.1** (Planned - Q3 2026)
 - Save/Load state machine configurations (JSON format)
 - Visual debugging mode (runtime state visualization)
 - More FPS templates (Flank, Suppress, Reload, Grenade)
@@ -1169,7 +1158,7 @@ blackboard.get("path_blocked", true) == false
 - Transition visualization (arrows with labels)
 - Performance profiler (track state execution time)
 
-### **Version 1.3** (Planned - Q4 2026)
+### **Version 1.2** (Planned - Q4 2026)
 - Behavior tree integration (hybrid FSM + BT)
 - Sub-state machines (nested states)
 - Parallel states (multiple active states)
@@ -1203,7 +1192,7 @@ Contributions are welcome! Whether it's:
 
 ## 📄 **License**
 
-MIT License - Free to use in commercial and personal projects!
+MIT License - Free to use in personal projects!
 
 ---
 
@@ -1233,54 +1222,15 @@ If you find OmniState AI useful:
 - Create and share your state machines
 - Contribute improvements
 - Report bugs and suggest features
+- Donations 
 
 ---
 
-## 🎉 **Version 1.0.0 Highlights**
 
-### **What's New:**
-✅ **AAA Transition System** - 4-tab professional editor
-✅ **Cooldown System** - Prevent state flickering
-✅ **Delay System** - Realistic reaction times
-✅ **Interrupt Control** - Protect important animations
-✅ **Animation Blending** - Smooth transitions (0-2s)
-✅ **Custom Code** - Execute logic on transitions
-✅ **Debug Logging** - Per-transition with colors
-✅ **9 Quick Presets** - One-click condition insertion
-✅ **Syntax Highlighting** - Professional code editors
-✅ **Enhanced Generation** - Advanced transition logic
-
-### **Quality Level:**
-🏆 **AAA Game Engine Quality**
-- Matches Unreal Engine 5/6
-- Matches Unity Animator Controller
-- Professional-grade features
-- Production-ready code
-- Scalable to any complexity
-
----
-
-**Version:** 1.0.0  
-**Release Date:** May 8, 2026  
-**Godot Version:** 4.x (4.0, 4.1, 4.2, 4.3+)  
-**Status:** ✅ Production Ready  
-**Quality:** AAA Game Engine Level  
-**License:** MIT (Free for commercial use)
-
-**Start building amazing AI now!** 🚀🎮
-
----
-
-*Last Updated: May 8, 2026*  
+**Version**: 1.0.0
 *Documentation Version: 1.0.0*  
-*Plugin Version: 1.0.0*
-- Create and share your state machines
-- Contribute improvements
-
----
-
-**Version**: 1.0.0  
 **Release Date**: May 8, 2026  
+*Last Updated: May 9, 2026* 
 **Godot Version**: 4.6.2 
 **Status**: ✅ Production Ready
 
