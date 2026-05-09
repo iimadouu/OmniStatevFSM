@@ -360,6 +360,13 @@ func _show_blackboard_dialog():
 				type_str = "String"
 			elif value is Vector3:
 				type_str = "Vector3"
+			elif value is Array:
+				type_str = "Array"
+				value_str = "[" + ", ".join(value) + "]"
+			elif value is Node:
+				type_str = "Node"
+				# Show node name and path instead of [Node:id]
+				value_str = value.name + " (" + str(value.get_path()) + ")"
 			type_lbl.text = "(" + type_str + ")"
 			type_lbl.custom_minimum_size.x = 80
 			type_lbl.add_theme_color_override("font_color", Color.CYAN)
