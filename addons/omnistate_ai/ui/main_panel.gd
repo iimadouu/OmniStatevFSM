@@ -30,13 +30,34 @@ var connection_from_node: String = ""
 # Undo/Redo
 var undo_redo: EditorUndoRedoManager = null
 
+# Auto-save
+var auto_save_timer: Timer = null
+var has_unsaved_changes: bool = false
+
 func _ready():
 	print("[DEBUG] main_panel _ready() called")
 	_setup_ui()
 	print("[DEBUG] _setup_ui() completed")
+	
+	# Setup auto-save timer (every 30 seconds)
+	auto_save_timer = Timer.new()
+	auto_save_timer.wait_time = 30.0
+	auto_save_timer.autostart = true
+	auto_save_timer.timeout.connect(_on_auto_save_timer_timeout)
+	add_child(auto_save_timer)
+	
 	# Try to auto-load existing graph
 	call_deferred("_try_auto_load")
 	print("[DEBUG] call_deferred _try_auto_load scheduled")
+
+func _on_auto_save_timer_timeout():
+	"""Periodic auto-save every 30 seconds if there are unsaved changes"""
+	if has_unsaved_changes:
+		var states = _get_all_state_nodes()
+		if not states.is_empty():
+			_save_graph_to_file()
+			has_unsaved_changes = false
+			print("💾 Auto-saved graph (periodic)")
 
 func _try_auto_load():
 	print("[DEBUG] _try_auto_load called")
@@ -176,11 +197,18 @@ func _setup_ui():
 	toolbar_container.add_child(toolbar2)
 
 	var btn_save = Button.new()
-	btn_save.text = "� Save & Generate"
-	btn_save.tooltip_text = "Generate FSM scripts from the visual graph"
-	btn_save.modulate = Color(0.5, 1.0, 0.5)
-	btn_save.pressed.connect(_on_save_pressed)
+	btn_save.text = "💾 Save Graph"
+	btn_save.tooltip_text = "Save the visual graph (auto-saves every 30s)"
+	btn_save.modulate = Color(0.7, 0.9, 1.0)
+	btn_save.pressed.connect(_on_manual_save_pressed)
 	toolbar2.add_child(btn_save)
+	
+	var btn_generate = Button.new()
+	btn_generate.text = "⚙ Generate Code"
+	btn_generate.tooltip_text = "Generate FSM scripts from the visual graph"
+	btn_generate.modulate = Color(0.5, 1.0, 0.5)
+	btn_generate.pressed.connect(_on_save_pressed)
+	toolbar2.add_child(btn_generate)
 	
 	var btn_recover = Button.new()
 	btn_recover.text = "🔍 Auto-Recover"
@@ -462,6 +490,9 @@ func _create_new_state(pos: Vector2):
 	
 	graph_edit.add_child(new_state)
 	
+	# Mark as changed
+	has_unsaved_changes = true
+	
 	# If this is the first state, make it initial
 	if _get_all_state_nodes().size() == 1:
 		new_state.is_initial_state_check.button_pressed = true
@@ -502,6 +533,9 @@ func _find_state_node_by_name(state_name: String) -> String:
 func _on_connection_request(from_node: StringName, from_port: int, to_node: StringName, to_port: int):
 	# Create visual connection
 	graph_edit.connect_node(from_node, from_port, to_node, to_port)
+	
+	# Mark as changed
+	has_unsaved_changes = true
 	
 	# Open dialog to add condition
 	var from_state_node = graph_edit.get_node(NodePath(from_node))
@@ -546,6 +580,9 @@ func _prompt_for_transition_condition(from_state: OmniStateNode, to_state: OmniS
 func _on_disconnection_request(from_node: StringName, from_port: int, to_node: StringName, to_port: int):
 	graph_edit.disconnect_node(from_node, from_port, to_node, to_port)
 	
+	# Mark as changed
+	has_unsaved_changes = true
+	
 	# Remove transition from state node
 	var from_state_node = graph_edit.get_node(NodePath(from_node))
 	var to_state_node = graph_edit.get_node(NodePath(to_node))
@@ -562,6 +599,9 @@ func _on_delete_nodes_request(nodes: Array):
 		var node = graph_edit.get_node(NodePath(node_name))
 		if node:
 			node.queue_free()
+	
+	# Mark as changed
+	has_unsaved_changes = true
 
 func _on_node_selected(node: Node):
 	if node is OmniStateNode:
@@ -575,8 +615,8 @@ func _on_state_node_selected(state_node: OmniStateNode):
 	selected_state_node = state_node
 
 func _on_state_data_changed():
-	# Could trigger auto-save or validation here
-	pass
+	# Mark as having unsaved changes
+	has_unsaved_changes = true
 
 func _on_add_template_pressed():
 	var popup = PopupMenu.new()
@@ -947,6 +987,16 @@ func _on_validate_pressed():
 	
 	_show_notification(result_text)
 
+func _on_manual_save_pressed():
+	"""Manual save button pressed"""
+	var states = _get_all_state_nodes()
+	if states.is_empty():
+		_show_notification("No states to save!")
+		return
+	
+	_save_graph_to_file()
+	_show_notification("✓ Graph saved successfully!")
+
 func _on_save_pressed():
 	# Validate first
 	var states = _get_all_state_nodes()
@@ -1008,7 +1058,12 @@ func _save_graph_to_file():
 				"name": node.get_state_name(),
 				"position": node.position_offset,
 				"is_initial": node.is_initial_state_check.button_pressed,
-				"color": node.state_color_picker.color,
+				"color": {
+					"r": node.state_color_picker.color.r,
+					"g": node.state_color_picker.color.g,
+					"b": node.state_color_picker.color.b,
+					"a": node.state_color_picker.color.a
+				},
 				"animation": node.get_selected_animation(),
 				"is_dynamic_animation": node.is_dynamic_animation(),
 				"enter_code": node.enter_code_input.text,
@@ -1030,6 +1085,7 @@ func _save_graph_to_file():
 		file.store_string(JSON.stringify(save_data, "\t"))
 		file.close()
 		print("✓ Graph saved to: ", save_path)
+		has_unsaved_changes = false  # Clear unsaved flag
 	else:
 		push_error("Failed to save graph to: " + save_path)
 
@@ -1107,12 +1163,26 @@ func _load_graph_from_file():
 		# Restore state data
 		new_state.state_name_input.text = state_data.get("name", "state")
 		new_state.is_initial_state_check.button_pressed = state_data.get("is_initial", false)
-		new_state.state_color_picker.color = Color(
-			state_data.color.r,
-			state_data.color.g,
-			state_data.color.b,
-			state_data.color.a
-		) if state_data.has("color") else Color.WHITE
+		
+		# Restore color - handle different formats
+		if state_data.has("color"):
+			var color_data = state_data.color
+			if color_data is Color:
+				new_state.state_color_picker.color = color_data
+			elif color_data is Dictionary:
+				new_state.state_color_picker.color = Color(
+					color_data.get("r", 1.0),
+					color_data.get("g", 1.0),
+					color_data.get("b", 1.0),
+					color_data.get("a", 1.0)
+				)
+			elif color_data is String:
+				# Parse string format like "#RRGGBBAA" or "(r, g, b, a)"
+				new_state.state_color_picker.color = Color(color_data) if color_data.begins_with("#") else Color.WHITE
+			else:
+				new_state.state_color_picker.color = Color.WHITE
+		else:
+			new_state.state_color_picker.color = Color.WHITE
 		
 		# Restore animation selection
 		var anim_name = state_data.get("animation", "")
