@@ -92,6 +92,12 @@ func _setup_ui():
 	btn_setup.pressed.connect(_on_setup_pressed)
 	toolbar.add_child(btn_setup)
 
+	var btn_blackboard = Button.new()
+	btn_blackboard.text = "📊 Blackboard"
+	btn_blackboard.tooltip_text = "Manage shared variables"
+	btn_blackboard.pressed.connect(_on_blackboard_pressed)
+	toolbar.add_child(btn_blackboard)
+
 	toolbar.add_child(VSeparator.new())
 
 	var btn_add_state = Button.new()
@@ -210,6 +216,91 @@ func _setup_ui():
 
 func _on_setup_pressed():
 	setup_wizard.popup_centered()
+
+func _on_blackboard_pressed():
+	var dialog = Window.new()
+	dialog.title = "Blackboard Variables"
+	dialog.size = Vector2i(600, 500)
+	
+	var vb = VBoxContainer.new()
+	vb.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vb.set_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 15)
+	dialog.add_child(vb)
+	
+	var desc = Label.new()
+	desc.text = "Shared variables accessible by all states via blackboard.get() / blackboard.set()"
+	desc.add_theme_font_size_override("font_size", 11)
+	desc.add_theme_color_override("font_color", Color.GRAY)
+	vb.add_child(desc)
+	
+	vb.add_child(HSeparator.new())
+	
+	# List existing variables
+	var scroll = ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(0, 300)
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	vb.add_child(scroll)
+	
+	var vars_list = VBoxContainer.new()
+	scroll.add_child(vars_list)
+	
+	# TODO: Load existing blackboard vars from config or graph data
+	# For now, show placeholder
+	var placeholder = Label.new()
+	placeholder.text = "No variables defined yet. Add one below."
+	placeholder.add_theme_color_override("font_color", Color.GRAY)
+	vars_list.add_child(placeholder)
+	
+	vb.add_child(HSeparator.new())
+	
+	# Add new variable section
+	var add_label = Label.new()
+	add_label.text = "Add New Variable:"
+	add_label.add_theme_font_size_override("font_size", 12)
+	vb.add_child(add_label)
+	
+	var add_hbox = HBoxContainer.new()
+	vb.add_child(add_hbox)
+	
+	var name_input = LineEdit.new()
+	name_input.placeholder_text = "variable_name"
+	name_input.custom_minimum_size.x = 150
+	add_hbox.add_child(name_input)
+	
+	var type_option = OptionButton.new()
+	type_option.add_item("bool", 0)
+	type_option.add_item("int", 1)
+	type_option.add_item("float", 2)
+	type_option.add_item("String", 3)
+	type_option.add_item("Vector3", 4)
+	add_hbox.add_child(type_option)
+	
+	var value_input = LineEdit.new()
+	value_input.placeholder_text = "default_value"
+	value_input.custom_minimum_size.x = 150
+	add_hbox.add_child(value_input)
+	
+	var add_btn = Button.new()
+	add_btn.text = "+ Add"
+	add_btn.pressed.connect(func():
+		if name_input.text.strip_edges() != "":
+			print("✓ Added blackboard variable: ", name_input.text)
+			# TODO: Store in config/graph data
+			dialog.hide()
+	)
+	add_hbox.add_child(add_btn)
+	
+	vb.add_child(HSeparator.new())
+	
+	# Close button
+	var close_btn = Button.new()
+	close_btn.text = "Close"
+	close_btn.pressed.connect(func(): dialog.hide())
+	vb.add_child(close_btn)
+	
+	add_child(dialog)
+	dialog.popup_centered()
+
 
 func _on_wizard_confirmed():
 	fsm_script_name = setup_wizard.script_name_input.text
