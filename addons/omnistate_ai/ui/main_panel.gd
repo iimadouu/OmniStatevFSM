@@ -350,6 +350,7 @@ func _show_blackboard_dialog():
 			var type_lbl = Label.new()
 			var value = blackboard_vars[var_name]
 			var type_str = ""
+			var value_str = ""
 			if value is bool:
 				type_str = "bool"
 			elif value is int:
