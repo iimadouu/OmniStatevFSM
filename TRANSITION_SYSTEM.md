@@ -358,9 +358,9 @@ if blend > 0 and animation_player:
 
 ---
 
-## 📈 Upgrade from v1.0.0
+## 📈 Version: 1.0.0
 
-### **What's New:**
+### ** Features:**
 - 4-tab advanced transition editor
 - 9 quick preset conditions
 - Cooldown system
