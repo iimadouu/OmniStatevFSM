@@ -88,7 +88,12 @@ func _init():
 	player_scene_input = LineEdit.new()
 	player_scene_input.placeholder_text = "res://scenes/player/player.tscn"
 	player_scene_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	vbox.add_child(player_scene_input)
+	player_hbox.add_child(player_scene_input)
+	
+	var browse_player_btn = Button.new()
+	browse_player_btn.text = "Browse"
+	browse_player_btn.pressed.connect(_on_browse_player_pressed)
+	player_hbox.add_child(browse_player_btn)
 	
 	vbox.add_child(HSeparator.new())
 	
@@ -114,8 +119,46 @@ func _init():
 	vbox.add_child(detect_btn)
 
 func _on_browse_enemy_pressed():
-	# TODO: Open file dialog for scene selection
-	pass
+	var file_dialog = EditorFileDialog.new()
+	file_dialog.file_mode = EditorFileDialog.FILE_MODE_OPEN_FILE
+	file_dialog.access = EditorFileDialog.ACCESS_RESOURCES
+	file_dialog.add_filter("*.tscn", "Scene Files")
+	file_dialog.title = "Select Enemy Scene"
+	file_dialog.current_dir = "res://"
+	
+	file_dialog.file_selected.connect(func(path: String):
+		enemy_scene_input.text = path
+		if auto_detect_animations_check.button_pressed:
+			_detect_animations_from_scene(path)
+		file_dialog.queue_free()
+	)
+	
+	file_dialog.canceled.connect(func():
+		file_dialog.queue_free()
+	)
+	
+	add_child(file_dialog)
+	file_dialog.popup_centered(Vector2i(800, 600))
+
+func _on_browse_player_pressed():
+	var file_dialog = EditorFileDialog.new()
+	file_dialog.file_mode = EditorFileDialog.FILE_MODE_OPEN_FILE
+	file_dialog.access = EditorFileDialog.ACCESS_RESOURCES
+	file_dialog.add_filter("*.tscn", "Scene Files")
+	file_dialog.title = "Select Player Scene"
+	file_dialog.current_dir = "res://"
+	
+	file_dialog.file_selected.connect(func(path: String):
+		player_scene_input.text = path
+		file_dialog.queue_free()
+	)
+	
+	file_dialog.canceled.connect(func():
+		file_dialog.queue_free()
+	)
+	
+	add_child(file_dialog)
+	file_dialog.popup_centered(Vector2i(800, 600))
 
 func _on_enemy_scene_changed(new_text: String):
 	if auto_detect_animations_check.button_pressed and new_text != "":
