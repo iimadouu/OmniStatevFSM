@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.1.0] - 2026-05-08
+## [1.0.0] - 2026-05-08
 
 ### 🎉 Initial Release - Professional Visual State Machine Editor with AAA-Quality Transition System
 
