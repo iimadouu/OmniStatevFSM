@@ -41,6 +41,16 @@ func _init():
 
 func _add_close_button():
 	var titlebar = get_titlebar_hbox()
+	
+	# Add transition counter badge
+	var trans_badge = Label.new()
+	trans_badge.name = "TransitionBadge"
+	trans_badge.text = "→0"
+	trans_badge.add_theme_color_override("font_color", Color(0.5, 1.0, 0.5))
+	trans_badge.add_theme_font_size_override("font_size", 10)
+	trans_badge.tooltip_text = "Number of outgoing transitions"
+	titlebar.add_child(trans_badge)
+	
 	var close_btn = Button.new()
 	close_btn.text = "×"
 	close_btn.flat = true
@@ -72,7 +82,7 @@ func _setup_ui():
 	# Initial State Checkbox
 	is_initial_state_check = CheckBox.new()
 	is_initial_state_check.text = "Initial State"
-	is_initial_state_check.toggled.connect(_on_initial_state_toggled)
+	is_initial_state_check.toggled.connect(on_initial_state_toggled)
 	basic_tab.add_child(is_initial_state_check)
 	
 	# State Color
@@ -207,7 +217,7 @@ func _on_state_name_changed(new_name: String):
 	title = new_name if new_name != "" else "New State"
 	state_data_changed.emit()
 
-func _on_initial_state_toggled(pressed: bool):
+func on_initial_state_toggled(pressed: bool):
 	if pressed:
 		modulate = Color(1.2, 1.2, 1.0)
 	else:
@@ -323,9 +333,9 @@ func is_initial_state() -> bool:
 
 func add_transition_condition(to_state: String, condition: String):
 	transitions.append({"to_state": to_state, "condition": condition})
-	_refresh_transitions_display()
+	refresh_transitions_display()
 
-func _refresh_transitions_display():
+func refresh_transitions_display():
 	# Clear existing
 	for child in conditions_container.get_children():
 		child.queue_free()
@@ -344,7 +354,23 @@ func _refresh_transitions_display():
 		remove_btn.text = "X"
 		remove_btn.pressed.connect(func():
 			transitions.erase(trans)
-			_refresh_transitions_display()
+			refresh_transitions_display()
 			state_data_changed.emit()
 		)
 		trans_item.add_child(remove_btn)
+	
+	# Update transition counter badge in title
+	_update_transition_badge()
+
+func _update_transition_badge():
+	"""Update the transition counter badge in the titlebar"""
+	var titlebar = get_titlebar_hbox()
+	var badge = titlebar.get_node_or_null("TransitionBadge")
+	if badge:
+		var count = transitions.size()
+		badge.text = "→" + str(count)
+		# Color code: green if has transitions, gray if none
+		if count > 0:
+			badge.add_theme_color_override("font_color", Color(0.5, 1.0, 0.5))
+		else:
+			badge.add_theme_color_override("font_color", Color.GRAY)
