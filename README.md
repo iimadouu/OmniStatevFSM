@@ -1,12 +1,12 @@
-# OmniState Visual AI
+# OmniState Visual FSM
 
-**Version 1.1.0** | **Released: May 8, 2026** | **Godot 4.x**
+**Version 1.0.0** | **Released: May 8, 2026** | **Godot 4.6.x**
 
 A professional-grade visual state machine editor for Godot 4.x with **AAA-quality transition system**. Create sophisticated AI behaviors through an intuitive node-based interface. Specialized for FPS games but adaptable to any genre.
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 ![Godot 4.x](https://img.shields.io/badge/Godot-4.x-blue.svg)
-![Version 1.1.0](https://img.shields.io/badge/Version-1.1.0-orange.svg)
+![Version 1.0.0](https://img.shields.io/badge/Version-1.0.0-orange.svg)
 ![Quality: AAA](https://img.shields.io/badge/Quality-AAA-gold.svg)
 
 ---
@@ -306,7 +306,7 @@ if owner.has_node("AudioPlayer"):
 - **Color picker** - Customize node colors
 - **Close button** - Easy deletion with × button
 
-### **🔗 AAA Transition System** ⭐ v1.1.0
+### **🔗 AAA Transition System** ⭐ v1.0.0
 
 #### **4-Tab Advanced Editor**
 Professional transition configuration matching Unreal Engine 5/6:
@@ -971,9 +971,9 @@ res://ai_states/your_fsm_name/
 ## 📖 **Documentation**
 
 ### **Complete Guides**
-- **[README.md](README.md)** - This file - Complete documentation with v1.1.0 features
+- **[README.md](README.md)** - This file - Complete documentation with v1.0.0 features
 - **[TRANSITION_SYSTEM.md](TRANSITION_SYSTEM.md)** - Advanced transition system guide ⭐ NEW!
-- **[WHATS_NEW_V1.1.md](WHATS_NEW_V1.1.md)** - v1.1.0 upgrade highlights ⭐ NEW!
+- **[WHATS_NEW_V1.1.md](WHATS_NEW_V1.1.md)** - v1.0.0 upgrade highlights ⭐ NEW!
 - **[BLACKBOARD_GUIDE.md](BLACKBOARD_GUIDE.md)** - Complete Blackboard tutorial ⭐ NEW!
 - **[QUICK_START_BLACKBOARD.md](QUICK_START_BLACKBOARD.md)** - 5-minute Blackboard guide ⭐ NEW!
 - **[CHANGELOG.md](CHANGELOG.md)** - Version history and updates
@@ -983,7 +983,7 @@ res://ai_states/your_fsm_name/
 - **[WORKING_FEATURES.md](WORKING_FEATURES.md)** - Current working features
 - **[ENHANCEMENTS_ROADMAP.md](ENHANCEMENTS_ROADMAP.md)** - Future plans
 
-### **New in v1.1.0** ⭐
+### **New in v1.0.0** ⭐
 - **[TRANSITION_SYSTEM.md](TRANSITION_SYSTEM.md)** - Complete guide to the AAA transition system
   - 4-tab editor walkthrough
   - All features explained with examples
@@ -1143,7 +1143,7 @@ blackboard.get("path_blocked", true) == false
 
 ## 🗺️ **Roadmap**
 
-### **Version 1.1.0** ✅ RELEASED!
+### **Version 1.0.0** ✅ RELEASED!
 - ✅ AAA-Quality Transition System (4-tab editor)
 - ✅ Cooldown System (prevent flickering)
 - ✅ Delay System (realistic reactions)
@@ -1232,7 +1232,7 @@ If you find OmniState AI useful:
 
 ---
 
-## 🎉 **Version 1.1.0 Highlights**
+## 🎉 **Version 1.0.0 Highlights**
 
 ### **What's New:**
 ✅ **AAA Transition System** - 4-tab professional editor
@@ -1256,7 +1256,7 @@ If you find OmniState AI useful:
 
 ---
 
-**Version:** 1.1.0  
+**Version:** 1.0.0  
 **Release Date:** May 8, 2026  
 **Godot Version:** 4.x (4.0, 4.1, 4.2, 4.3+)  
 **Status:** ✅ Production Ready  
@@ -1268,8 +1268,8 @@ If you find OmniState AI useful:
 ---
 
 *Last Updated: May 8, 2026*  
-*Documentation Version: 1.1.0*  
-*Plugin Version: 1.1.0*
+*Documentation Version: 1.0.0*  
+*Plugin Version: 1.0.0*
 - Create and share your state machines
 - Contribute improvements
 
