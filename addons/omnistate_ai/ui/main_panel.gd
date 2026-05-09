@@ -21,6 +21,7 @@ var enemy_scene_path = ""
 var player_scene_path = ""
 var animation_player_path = "AnimationPlayer"
 var detected_animations: Array = []
+var blackboard_vars: Dictionary = {}  # Stores blackboard variables
 
 # State tracking
 var selected_state_node: OmniStateNode = null
@@ -91,7 +92,7 @@ func _setup_ui():
 	btn_setup.tooltip_text = "Configure FSM settings and detect animations"
 	btn_setup.pressed.connect(_on_setup_pressed)
 	toolbar.add_child(btn_setup)
-
+	
 	var btn_blackboard = Button.new()
 	btn_blackboard.text = "📊 Blackboard"
 	btn_blackboard.tooltip_text = "Manage shared variables"
@@ -122,15 +123,33 @@ func _setup_ui():
 
 	var btn_auto_arrange = Button.new()
 	btn_auto_arrange.text = "📐 Arrange"
-	btn_auto_arrange.tooltip_text = "Auto arrange nodes"
+	btn_auto_arrange.tooltip_text = "Auto arrange nodes in hierarchical layout"
 	btn_auto_arrange.pressed.connect(_on_auto_arrange_pressed)
 	toolbar.add_child(btn_auto_arrange)
 
+	var btn_zoom_in = Button.new()
+	btn_zoom_in.text = "🔍+"
+	btn_zoom_in.tooltip_text = "Zoom in"
+	btn_zoom_in.pressed.connect(_on_zoom_in_pressed)
+	toolbar.add_child(btn_zoom_in)
+	
+	var btn_zoom_out = Button.new()
+	btn_zoom_out.text = "🔍-"
+	btn_zoom_out.tooltip_text = "Zoom out"
+	btn_zoom_out.pressed.connect(_on_zoom_out_pressed)
+	toolbar.add_child(btn_zoom_out)
+
 	var btn_zoom_reset = Button.new()
-	btn_zoom_reset.text = "🔍 Zoom"
-	btn_zoom_reset.tooltip_text = "Reset zoom"
+	btn_zoom_reset.text = "🔍 Reset"
+	btn_zoom_reset.tooltip_text = "Reset zoom to 100%"
 	btn_zoom_reset.pressed.connect(_on_zoom_reset_pressed)
 	toolbar.add_child(btn_zoom_reset)
+	
+	var btn_fit_view = Button.new()
+	btn_fit_view.text = "⊡ Fit"
+	btn_fit_view.tooltip_text = "Fit all nodes in view"
+	btn_fit_view.pressed.connect(_on_fit_view_pressed)
+	toolbar.add_child(btn_fit_view)
 
 	toolbar.add_child(VSeparator.new())
 
@@ -139,6 +158,18 @@ func _setup_ui():
 	btn_validate.tooltip_text = "Check for errors"
 	btn_validate.pressed.connect(_on_validate_pressed)
 	toolbar.add_child(btn_validate)
+	
+	var btn_toggle_minimap = Button.new()
+	btn_toggle_minimap.text = "🗺"
+	btn_toggle_minimap.tooltip_text = "Toggle minimap"
+	btn_toggle_minimap.pressed.connect(_on_toggle_minimap_pressed)
+	toolbar.add_child(btn_toggle_minimap)
+	
+	var btn_show_connections = Button.new()
+	btn_show_connections.text = "🔗 Info"
+	btn_show_connections.tooltip_text = "Show all connections and transitions"
+	btn_show_connections.pressed.connect(_on_show_connections_pressed)
+	toolbar.add_child(btn_show_connections)
 	
 	# Row 2: File operations
 	var toolbar2 = HBoxContainer.new()
@@ -184,6 +215,17 @@ func _setup_ui():
 	graph_edit.show_zoom_label = true
 	graph_edit.minimap_enabled = true
 	graph_edit.minimap_opacity = 0.7
+	graph_edit.minimap_size = Vector2(200, 150)
+	
+	# Enhanced visual settings
+	graph_edit.connection_lines_curvature = 0.5  # Smoother curves
+	graph_edit.connection_lines_thickness = 2.0
+	graph_edit.connection_lines_antialiased = true
+	
+	# Zoom settings
+	graph_edit.zoom_min = 0.2
+	graph_edit.zoom_max = 2.0
+	graph_edit.zoom_step = 1.1
 	
 	# Connect signals
 	graph_edit.connection_request.connect(_on_connection_request)
@@ -218,9 +260,28 @@ func _on_setup_pressed():
 	setup_wizard.popup_centered()
 
 func _on_blackboard_pressed():
+	_show_blackboard_dialog()
+
+func _show_blackboard_dialog():
+	# Remove any existing blackboard dialogs first
+	var found_existing = false
+	for child in get_children():
+		if child is Window and child.title == "Blackboard Variables":
+			found_existing = true
+			child.queue_free()
+	
+	if found_existing:
+		await get_tree().process_frame
+	
 	var dialog = Window.new()
 	dialog.title = "Blackboard Variables"
 	dialog.size = Vector2i(600, 500)
+	dialog.transient = true
+	dialog.exclusive = false
+	
+	dialog.close_requested.connect(func():
+		dialog.queue_free()
+	)
 	
 	var vb = VBoxContainer.new()
 	vb.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -235,7 +296,6 @@ func _on_blackboard_pressed():
 	
 	vb.add_child(HSeparator.new())
 	
-	# List existing variables
 	var scroll = ScrollContainer.new()
 	scroll.custom_minimum_size = Vector2(0, 300)
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -244,16 +304,56 @@ func _on_blackboard_pressed():
 	var vars_list = VBoxContainer.new()
 	scroll.add_child(vars_list)
 	
-	# TODO: Load existing blackboard vars from config or graph data
-	# For now, show placeholder
-	var placeholder = Label.new()
-	placeholder.text = "No variables defined yet. Add one below."
-	placeholder.add_theme_color_override("font_color", Color.GRAY)
-	vars_list.add_child(placeholder)
+	if blackboard_vars.is_empty():
+		var placeholder = Label.new()
+		placeholder.text = "No variables defined yet. Add one below."
+		placeholder.add_theme_color_override("font_color", Color.GRAY)
+		vars_list.add_child(placeholder)
+	else:
+		for var_name in blackboard_vars.keys():
+			var item = HBoxContainer.new()
+			vars_list.add_child(item)
+			
+			var name_lbl = Label.new()
+			name_lbl.text = var_name
+			name_lbl.custom_minimum_size.x = 150
+			item.add_child(name_lbl)
+			
+			var type_lbl = Label.new()
+			var value = blackboard_vars[var_name]
+			var type_str = ""
+			if value is bool:
+				type_str = "bool"
+			elif value is int:
+				type_str = "int"
+			elif value is float:
+				type_str = "float"
+			elif value is String:
+				type_str = "String"
+			elif value is Vector3:
+				type_str = "Vector3"
+			type_lbl.text = "(" + type_str + ")"
+			type_lbl.custom_minimum_size.x = 80
+			type_lbl.add_theme_color_override("font_color", Color.CYAN)
+			item.add_child(type_lbl)
+			
+			var value_lbl = Label.new()
+			value_lbl.text = " = " + str(value)
+			value_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			item.add_child(value_lbl)
+			
+			var del_btn = Button.new()
+			del_btn.text = "×"
+			del_btn.custom_minimum_size.x = 30
+			del_btn.pressed.connect(func():
+				blackboard_vars.erase(var_name)
+				print("✓ Removed blackboard variable: ", var_name)
+				_show_blackboard_dialog()
+			)
+			item.add_child(del_btn)
 	
 	vb.add_child(HSeparator.new())
 	
-	# Add new variable section
 	var add_label = Label.new()
 	add_label.text = "Add New Variable:"
 	add_label.add_theme_font_size_override("font_size", 12)
@@ -283,24 +383,42 @@ func _on_blackboard_pressed():
 	var add_btn = Button.new()
 	add_btn.text = "+ Add"
 	add_btn.pressed.connect(func():
-		if name_input.text.strip_edges() != "":
-			print("✓ Added blackboard variable: ", name_input.text)
-			# TODO: Store in config/graph data
-			dialog.hide()
+		var var_name = name_input.text.strip_edges()
+		if var_name == "":
+			print("⚠ Variable name cannot be empty")
+			return
+		
+		if blackboard_vars.has(var_name):
+			print("⚠ Variable already exists: ", var_name)
+			return
+		
+		var value = value_input.text.strip_edges()
+		var final_value
+		
+		match type_option.selected:
+			0: final_value = value.to_lower() == "true"
+			1: final_value = int(value) if value != "" else 0
+			2: final_value = float(value) if value != "" else 0.0
+			3: final_value = value
+			4: final_value = Vector3.ZERO
+		
+		blackboard_vars[var_name] = final_value
+		print("✓ Added blackboard variable: ", var_name, " = ", final_value)
+		_show_blackboard_dialog()
 	)
 	add_hbox.add_child(add_btn)
 	
 	vb.add_child(HSeparator.new())
 	
-	# Close button
 	var close_btn = Button.new()
 	close_btn.text = "Close"
-	close_btn.pressed.connect(func(): dialog.hide())
+	close_btn.pressed.connect(func(): 
+		dialog.queue_free()
+	)
 	vb.add_child(close_btn)
 	
 	add_child(dialog)
 	dialog.popup_centered()
-
 
 func _on_wizard_confirmed():
 	fsm_script_name = setup_wizard.script_name_input.text
@@ -335,7 +453,6 @@ func _on_add_state_pressed():
 func _create_new_state(pos: Vector2):
 	var new_state = StateNodeClass.new()
 	new_state.position_offset = pos + Vector2(randf_range(-50, 50), randf_range(-50, 50))
-	new_state
 	new_state.state_selected.connect(_on_state_node_selected)
 	new_state.state_data_changed.connect(_on_state_data_changed)
 	
@@ -348,7 +465,7 @@ func _create_new_state(pos: Vector2):
 	# If this is the first state, make it initial
 	if _get_all_state_nodes().size() == 1:
 		new_state.is_initial_state_check.button_pressed = true
-		new_state._on_initial_state_toggled(true)
+		new_state.is_initial_state_check.toggled.emit(true)
 
 func _on_add_transition_pressed():
 	var states = _get_all_state_nodes()
@@ -392,6 +509,9 @@ func _on_connection_request(from_node: StringName, from_port: int, to_node: Stri
 	
 	if from_state_node is OmniStateNode and to_state_node is OmniStateNode:
 		_prompt_for_transition_condition(from_state_node, to_state_node)
+		
+		# Highlight the connection briefly to show direction
+		_highlight_connection(from_node, to_node)
 
 func _prompt_for_transition_condition(from_state: OmniStateNode, to_state: OmniStateNode):
 	var dialog = AcceptDialog.new()
@@ -435,7 +555,7 @@ func _on_disconnection_request(from_node: StringName, from_port: int, to_node: S
 		from_state_node.transitions = from_state_node.transitions.filter(
 			func(t): return t.to_state != to_name
 		)
-		from_state_node._refresh_transitions_display()
+		from_state_node.refresh_transitions_display()
 
 func _on_delete_nodes_request(nodes: Array):
 	for node_name in nodes:
@@ -477,7 +597,6 @@ func _on_add_template_pressed():
 func _create_state_from_template(template_name: String, pos: Vector2):
 	var new_state = StateNodeClass.new()
 	new_state.position_offset = pos + Vector2(randf_range(-50, 50), randf_range(-50, 50))
-	new_state
 	new_state.state_selected.connect(_on_state_node_selected)
 	new_state.state_data_changed.connect(_on_state_data_changed)
 	
@@ -515,7 +634,10 @@ func _on_popup_request(position: Vector2):
 	popup.add_submenu_item("Add from Template", "Templates", 2)
 	
 	popup.add_separator()
-	popup.add_item("Clear All", 3)
+	popup.add_item("Arrange All Nodes", 3)
+	popup.add_item("Fit View", 4)
+	popup.add_separator()
+	popup.add_item("Clear All", 5)
 	
 	popup.id_pressed.connect(func(id):
 		match id:
@@ -525,11 +647,15 @@ func _on_popup_request(position: Vector2):
 				var state = StateNodeClass.new()
 				state.position_offset = position
 				state.is_initial_state_check.button_pressed = true
-				state._on_initial_state_toggled(true)
+				state.on_initial_state_toggled(true)
 				for anim in detected_animations:
 					state.add_animation_option(anim)
 				graph_edit.add_child(state)
 			3:
+				_on_auto_arrange_pressed()
+			4:
+				_on_fit_view_pressed()
+			5:
 				_clear_all_states()
 		popup.queue_free()
 	)
@@ -542,18 +668,275 @@ func _on_auto_arrange_pressed():
 	if states.is_empty():
 		return
 	
-	# Simple circular arrangement
-	var center = Vector2(400, 300)
-	var radius = 250
-	var angle_step = TAU / states.size()
+	# Get connections to understand the graph structure
+	var connections = graph_edit.get_connection_list()
+	
+	# Build adjacency map
+	var adjacency = {}
+	for state in states:
+		adjacency[state.name] = []
+	
+	for conn in connections:
+		if adjacency.has(conn.from_node):
+			adjacency[conn.from_node].append(conn.to_node)
+	
+	# Find initial state (root)
+	var initial_state = null
+	for state in states:
+		if state.is_initial_state_check.button_pressed:
+			initial_state = state
+			break
+	
+	# If no initial state, use first state
+	if initial_state == null and not states.is_empty():
+		initial_state = states[0]
+	
+	# Use hierarchical layout
+	if initial_state:
+		_arrange_hierarchical(states, connections, initial_state)
+	else:
+		_arrange_grid(states)
+
+func _arrange_hierarchical(states: Array, connections: Array, root_state: OmniStateNode):
+	"""Arrange nodes in a hierarchical tree layout"""
+	var layers = {}  # layer_index -> [nodes]
+	var visited = {}
+	var node_to_layer = {}
+	
+	# BFS to assign layers
+	var queue = [[root_state, 0]]  # [node, layer]
+	visited[root_state.name] = true
+	
+	while not queue.is_empty():
+		var current = queue.pop_front()
+		var node = current[0]
+		var layer = current[1]
+		
+		if not layers.has(layer):
+			layers[layer] = []
+		layers[layer].append(node)
+		node_to_layer[node.name] = layer
+		
+		# Find children
+		for conn in connections:
+			if conn.from_node == node.name:
+				var child = _get_node_by_name(conn.to_node)
+				if child and not visited.has(child.name):
+					visited[child.name] = true
+					queue.append([child, layer + 1])
+	
+	# Add unvisited nodes to last layer
+	var max_layer = layers.keys().max() if not layers.is_empty() else 0
+	for state in states:
+		if not visited.has(state.name):
+			if not layers.has(max_layer + 1):
+				layers[max_layer + 1] = []
+			layers[max_layer + 1].append(state)
+	
+	# Position nodes
+	var layer_spacing = 300.0
+	var node_spacing = 250.0
+	var start_x = 100.0
+	var start_y = 100.0
+	
+	for layer_idx in layers.keys():
+		var layer_nodes = layers[layer_idx]
+		var layer_width = (layer_nodes.size() - 1) * node_spacing
+		var x_offset = start_x
+		
+		for i in range(layer_nodes.size()):
+			var node = layer_nodes[i]
+			var x = x_offset + (i * node_spacing)
+			var y = start_y + (layer_idx * layer_spacing)
+			node.position_offset = Vector2(x, y)
+
+func _arrange_grid(states: Array):
+	"""Fallback grid arrangement"""
+	var cols = ceil(sqrt(states.size()))
+	var spacing = 300.0
+	var start_x = 100.0
+	var start_y = 100.0
 	
 	for i in range(states.size()):
-		var angle = i * angle_step
-		var pos = center + Vector2(cos(angle), sin(angle)) * radius
-		states[i].position_offset = pos
+		var col = i % int(cols)
+		var row = i / int(cols)
+		var x = start_x + (col * spacing)
+		var y = start_y + (row * spacing)
+		states[i].position_offset = Vector2(x, y)
+
+func _get_node_by_name(node_name: String) -> OmniStateNode:
+	"""Helper to get state node by name"""
+	for node in graph_edit.get_children():
+		if node is OmniStateNode and node.name == node_name:
+			return node
+	return null
+
+func _on_zoom_in_pressed():
+	graph_edit.zoom *= 1.2
+	graph_edit.zoom = clamp(graph_edit.zoom, graph_edit.zoom_min, graph_edit.zoom_max)
+
+func _on_zoom_out_pressed():
+	graph_edit.zoom /= 1.2
+	graph_edit.zoom = clamp(graph_edit.zoom, graph_edit.zoom_min, graph_edit.zoom_max)
 
 func _on_zoom_reset_pressed():
 	graph_edit.zoom = 1.0
+
+func _on_fit_view_pressed():
+	"""Fit all nodes in the viewport"""
+	var states = _get_all_state_nodes()
+	if states.is_empty():
+		return
+	
+	# Calculate bounding box
+	var min_pos = Vector2(INF, INF)
+	var max_pos = Vector2(-INF, -INF)
+	
+	for state in states:
+		var pos = state.position_offset
+		var size = state.size
+		min_pos.x = min(min_pos.x, pos.x)
+		min_pos.y = min(min_pos.y, pos.y)
+		max_pos.x = max(max_pos.x, pos.x + size.x)
+		max_pos.y = max(max_pos.y, pos.y + size.y)
+	
+	# Calculate center and zoom
+	var center = (min_pos + max_pos) / 2.0
+	var bounds_size = max_pos - min_pos
+	var viewport_size = graph_edit.size
+	
+	# Calculate zoom to fit
+	var zoom_x = viewport_size.x / (bounds_size.x + 200)  # +200 for padding
+	var zoom_y = viewport_size.y / (bounds_size.y + 200)
+	var target_zoom = min(zoom_x, zoom_y)
+	target_zoom = clamp(target_zoom, graph_edit.zoom_min, graph_edit.zoom_max)
+	
+	graph_edit.zoom = target_zoom
+	
+	# Center the view
+	graph_edit.scroll_offset = center - (viewport_size / (2.0 * target_zoom))
+
+func _on_show_connections_pressed():
+	"""Show a dialog with all connections and their conditions"""
+	var dialog = Window.new()
+	dialog.title = "Transition Connections"
+	dialog.size = Vector2i(700, 500)
+	dialog.transient = true
+	dialog.exclusive = false
+	
+	var vb = VBoxContainer.new()
+	vb.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vb.set_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 15)
+	dialog.add_child(vb)
+	
+	var title_label = Label.new()
+	title_label.text = "All State Transitions (From → To)"
+	title_label.add_theme_font_size_override("font_size", 14)
+	vb.add_child(title_label)
+	
+	vb.add_child(HSeparator.new())
+	
+	var scroll = ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	vb.add_child(scroll)
+	
+	var list = VBoxContainer.new()
+	scroll.add_child(list)
+	
+	# Gather all transitions
+	var states = _get_all_state_nodes()
+	var has_transitions = false
+	
+	for state in states:
+		if state.transitions.is_empty():
+			continue
+		
+		has_transitions = true
+		
+		# State header
+		var state_header = Label.new()
+		state_header.text = "━━━ FROM: " + state.get_state_name() + " ━━━"
+		state_header.add_theme_font_size_override("font_size", 12)
+		state_header.add_theme_color_override("font_color", state.state_color_picker.color)
+		list.add_child(state_header)
+		
+		# List transitions
+		for trans in state.transitions:
+			var trans_container = HBoxContainer.new()
+			list.add_child(trans_container)
+			
+			var arrow_label = Label.new()
+			arrow_label.text = "    ➜  "
+			arrow_label.add_theme_color_override("font_color", Color(0.5, 1.0, 0.5))
+			trans_container.add_child(arrow_label)
+			
+			var to_label = Label.new()
+			to_label.text = "TO: " + trans.to_state
+			to_label.custom_minimum_size.x = 150
+			to_label.add_theme_color_override("font_color", Color(0.7, 0.9, 1.0))
+			trans_container.add_child(to_label)
+			
+			var condition_label = Label.new()
+			condition_label.text = "WHEN: " + trans.condition
+			condition_label.add_theme_color_override("font_color", Color.YELLOW)
+			trans_container.add_child(condition_label)
+			
+			# Highlight button
+			var highlight_btn = Button.new()
+			highlight_btn.text = "👁 Show"
+			highlight_btn.custom_minimum_size.x = 80
+			highlight_btn.pressed.connect(func():
+				var from_node_name = state.name
+				var to_node_name = _find_state_node_by_name(trans.to_state)
+				if to_node_name != "":
+					_highlight_connection(from_node_name, to_node_name)
+					# Also scroll to show both nodes
+					_focus_on_nodes([state.name, to_node_name])
+			)
+			trans_container.add_child(highlight_btn)
+		
+		list.add_child(HSeparator.new())
+	
+	if not has_transitions:
+		var no_trans = Label.new()
+		no_trans.text = "No transitions defined yet.\nCreate connections between states to see them here."
+		no_trans.add_theme_color_override("font_color", Color.GRAY)
+		list.add_child(no_trans)
+	
+	var close_btn = Button.new()
+	close_btn.text = "Close"
+	close_btn.pressed.connect(func(): dialog.queue_free())
+	vb.add_child(close_btn)
+	
+	add_child(dialog)
+	dialog.popup_centered()
+
+func _focus_on_nodes(node_names: Array):
+	"""Center the view on specific nodes"""
+	if node_names.is_empty():
+		return
+	
+	var positions = []
+	for node_name in node_names:
+		var node = graph_edit.get_node_or_null(NodePath(node_name))
+		if node:
+			positions.append(node.position_offset)
+	
+	if positions.is_empty():
+		return
+	
+	# Calculate center
+	var center = Vector2.ZERO
+	for pos in positions:
+		center += pos
+	center /= positions.size()
+	
+	# Scroll to center
+	var viewport_size = graph_edit.size
+	graph_edit.scroll_offset = center - (viewport_size / (2.0 * graph_edit.zoom))
+
+func _on_toggle_minimap_pressed():
+	graph_edit.minimap_enabled = not graph_edit.minimap_enabled
 
 func _on_validate_pressed():
 	var states = _get_all_state_nodes()
@@ -694,8 +1077,24 @@ func _load_graph_from_file():
 	
 	for state_data in save_data.get("states", []):
 		var new_state = StateNodeClass.new()
-		new_state.position_offset = Vector2(state_data.position.x, state_data.position.y)
-		new_state
+		
+		# Handle position - could be Vector2, Dictionary, or String
+		var pos = state_data.get("position", Vector2(100, 100))
+		if pos is Vector2:
+			new_state.position_offset = pos
+		elif pos is Dictionary:
+			new_state.position_offset = Vector2(pos.get("x", 100), pos.get("y", 100))
+		elif pos is String:
+			# Parse string like "(100, 100)"
+			var cleaned = pos.replace("(", "").replace(")", "")
+			var parts = cleaned.split(",")
+			if parts.size() >= 2:
+				new_state.position_offset = Vector2(float(parts[0].strip_edges()), float(parts[1].strip_edges()))
+			else:
+				new_state.position_offset = Vector2(100, 100)
+		else:
+			new_state.position_offset = Vector2(100, 100)
+		
 		new_state.state_selected.connect(_on_state_node_selected)
 		new_state.state_data_changed.connect(_on_state_data_changed)
 		
@@ -730,13 +1129,13 @@ func _load_graph_from_file():
 		
 		# Restore transitions
 		new_state.transitions = state_data.get("transitions", [])
-		new_state._refresh_transitions_display()
+		new_state.refresh_transitions_display()
 		
 		# Restore behaviors
 		new_state.behaviors = state_data.get("behaviors", [])
 		
 		# Update visual state
-		new_state._on_initial_state_toggled(new_state.is_initial_state_check.button_pressed)
+		new_state.on_initial_state_toggled(new_state.is_initial_state_check.button_pressed)
 		
 		# Map state name to node name for connections
 		node_name_map[state_data.get("name", "")] = new_state.name
@@ -934,6 +1333,29 @@ func _clear_all_states():
 	add_child(confirm)
 	confirm.popup_centered()
 
+func _highlight_connection(from_node: String, to_node: String):
+	"""Briefly highlight a connection to show its direction"""
+	# Visual feedback is handled by GraphEdit's built-in rendering
+	# We can enhance this by temporarily modifying node colors
+	var from_state = graph_edit.get_node(NodePath(from_node))
+	var to_state = graph_edit.get_node(NodePath(to_node))
+	
+	if from_state and to_state:
+		# Store original modulates
+		var from_original = from_state.modulate
+		var to_original = to_state.modulate
+		
+		# Highlight: from = green (source), to = blue (target)
+		from_state.modulate = Color(0.5, 1.0, 0.5, 1.0)  # Green tint
+		to_state.modulate = Color(0.5, 0.5, 1.0, 1.0)    # Blue tint
+		
+		# Reset after 1 second
+		await get_tree().create_timer(1.0).timeout
+		if is_instance_valid(from_state):
+			from_state.modulate = from_original
+		if is_instance_valid(to_state):
+			to_state.modulate = to_original
+
 func _get_all_state_nodes() -> Array:
 	var states = []
 	for node in graph_edit.get_children():
@@ -1061,7 +1483,6 @@ func _try_auto_recover_from_files():
 	for state_data in recovered_states:
 		var new_state = StateNodeClass.new()
 		new_state.position_offset = Vector2(x_offset + (col * spacing), y_offset + (row * spacing))
-		new_state
 		new_state.state_selected.connect(_on_state_node_selected)
 		new_state.state_data_changed.connect(_on_state_data_changed)
 		
@@ -1081,7 +1502,7 @@ func _try_auto_recover_from_files():
 		# Mark first state as initial
 		if recovered_states[0] == state_data:
 			new_state.is_initial_state_check.button_pressed = true
-			new_state._on_initial_state_toggled(true)
+			new_state.on_initial_state_toggled(true)
 		
 		# Store for connections
 		state_name_to_node[state_data.name] = new_state.name
