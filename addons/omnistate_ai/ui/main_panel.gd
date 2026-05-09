@@ -350,7 +350,6 @@ func _show_blackboard_dialog():
 			var type_lbl = Label.new()
 			var value = blackboard_vars[var_name]
 			var type_str = ""
-			var value_str = ""
 			if value is bool:
 				type_str = "bool"
 			elif value is int:
@@ -359,17 +358,20 @@ func _show_blackboard_dialog():
 				type_str = "float"
 			elif value is String:
 				type_str = "String"
+			elif value is Vector2:
+				type_str = "Vector2"
 			elif value is Vector3:
 				type_str = "Vector3"
 			elif value is Array:
 				type_str = "Array"
-				value_str = "[" + ", ".join(value) + "]"
+			elif value is Dictionary:
+				type_str = "Dictionary"
 			elif value is Node:
 				type_str = "Node"
-				# Show node name and path instead of [Node:id]
-				value_str = value.name + " (" + str(value.get_path()) + ")"
+			else:
+				type_str = "Variant"
 			type_lbl.text = "(" + type_str + ")"
-			type_lbl.custom_minimum_size.x = 80
+			type_lbl.custom_minimum_size.x = 100
 			type_lbl.add_theme_color_override("font_color", Color.CYAN)
 			item.add_child(type_lbl)
 			
@@ -408,7 +410,11 @@ func _show_blackboard_dialog():
 	type_option.add_item("int", 1)
 	type_option.add_item("float", 2)
 	type_option.add_item("String", 3)
-	type_option.add_item("Vector3", 4)
+	type_option.add_item("Vector2", 4)
+	type_option.add_item("Vector3", 5)
+	type_option.add_item("Array", 6)
+	type_option.add_item("Dictionary", 7)
+	type_option.add_item("Node", 8)
 	add_hbox.add_child(type_option)
 	
 	var value_input = LineEdit.new()
@@ -436,7 +442,11 @@ func _show_blackboard_dialog():
 			1: final_value = int(value) if value != "" else 0
 			2: final_value = float(value) if value != "" else 0.0
 			3: final_value = value
-			4: final_value = Vector3.ZERO
+			4: final_value = Vector2.ZERO
+			5: final_value = Vector3.ZERO
+			6: final_value = []  # Empty array
+			7: final_value = {}  # Empty dictionary
+			8: final_value = null  # Node reference (null by default)
 		
 		blackboard_vars[var_name] = final_value
 		print("✓ Added blackboard variable: ", var_name, " = ", final_value)
@@ -1055,6 +1065,7 @@ func _save_graph_to_file():
 		"player_scene_path": player_scene_path,
 		"animation_player_path": animation_player_path,
 		"detected_animations": detected_animations,
+		"blackboard_vars": blackboard_vars.duplicate(),  # Save blackboard variables
 		"states": [],
 		"connections": graph_edit.get_connection_list()
 	}
@@ -1135,6 +1146,7 @@ func _load_graph_from_file():
 	player_scene_path = save_data.get("player_scene_path", "")
 	animation_player_path = save_data.get("animation_player_path", "AnimationPlayer")
 	detected_animations = save_data.get("detected_animations", [])
+	blackboard_vars = save_data.get("blackboard_vars", {})  # Restore blackboard variables
 	
 	# Restore state nodes
 	var node_name_map = {}  # Map state names to node names for connections
