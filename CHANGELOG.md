@@ -170,16 +170,16 @@ Pre-built templates for rapid development:
   - No performance degradation
   - Clean generated code
 
-### 🐛 Bug Fixes
-- Fixed GraphNode close button for Godot 4.3+
-  - Changed from `show_close` property to manual button
-  - Uses `get_titlebar_hbox()` for compatibility
-  - Works across all Godot 4.x versions
+### ✅ Implementation Details
+- **GraphNode compatibility** - Works across all Godot 4.x versions (4.3+)
+  - Handles `show_close` property variations
+  - Uses `get_titlebar_hbox()` for titlebar access
+  - Proper close button implementation
 
-- Fixed transition deletion
-  - Properly removes transition data
-  - Cleans up connections
-  - Console logging for confirmation
+- **Transition handling** - Robust state transition system
+  - Proper transition data management
+  - Clean connection handling
+  - Console logging for debugging
 
 ### 📚 Documentation
 - `README.md` - Complete setup and usage guide
