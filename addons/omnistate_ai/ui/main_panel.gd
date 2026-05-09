@@ -232,7 +232,8 @@ func _setup_ui():
 	toolbar2.add_child(script_label)
 	
 	var script_name_label = Label.new()
-	script_name_label.text = "enemy_fsm"
+	script_name_label.name = "ScriptNameLabel"  # Give it a name so we can update it
+	script_name_label.text = fsm_script_name
 	script_name_label.add_theme_color_override("font_color", Color(0.7, 0.9, 1.0))
 	toolbar2.add_child(script_name_label)
 
@@ -285,6 +286,18 @@ func _setup_ui():
 	transition_dialog.confirmed.connect(_on_transition_confirmed)
 
 func _on_setup_pressed():
+	# Populate wizard with current values before showing
+	setup_wizard.script_name_input.text = fsm_script_name
+	setup_wizard.enemy_scene_input.text = enemy_scene_path
+	setup_wizard.player_scene_input.text = player_scene_path
+	setup_wizard.animation_player_path_input.text = animation_player_path
+	
+	# Set base class selection
+	var base_class_names = ["CharacterBody3D", "CharacterBody2D", "Node3D", "Node2D", "Node"]
+	var base_class_index = base_class_names.find(base_class_name)
+	if base_class_index != -1:
+		setup_wizard.base_class_option.selected = base_class_index
+	
 	setup_wizard.popup_centered()
 
 func _on_blackboard_pressed():
@@ -474,6 +487,12 @@ func _on_wizard_confirmed():
 	animation_player_path = setup_wizard.animation_player_path_input.text
 	detected_animations = setup_wizard.detected_animations.duplicate()
 	
+	# Mark as changed
+	has_unsaved_changes = true
+	
+	# Update script name label in toolbar
+	_update_script_name_label()
+	
 	# Update all existing state nodes with detected animations
 	_update_state_animations()
 	
@@ -481,6 +500,13 @@ func _on_wizard_confirmed():
 	print("  Script: ", fsm_script_name)
 	print("  Base Class: ", base_class_name)
 	print("  Animations: ", detected_animations)
+
+func _update_script_name_label():
+	"""Update the script name display in the toolbar"""
+	if toolbar:
+		var label = toolbar.get_parent().get_node_or_null("HBoxContainer/ScriptNameLabel")
+		if label:
+			label.text = fsm_script_name
 
 func _update_state_animations():
 	for node in graph_edit.get_children():
@@ -1147,6 +1173,9 @@ func _load_graph_from_file():
 	animation_player_path = save_data.get("animation_player_path", "AnimationPlayer")
 	detected_animations = save_data.get("detected_animations", [])
 	blackboard_vars = save_data.get("blackboard_vars", {})  # Restore blackboard variables
+	
+	# Update UI to reflect loaded configuration
+	_update_script_name_label()
 	
 	# Restore state nodes
 	var node_name_map = {}  # Map state names to node names for connections
