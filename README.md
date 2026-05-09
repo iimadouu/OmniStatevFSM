@@ -34,8 +34,8 @@ OmniState AI transforms AI development from tedious coding into visual design. C
 
 ## 📦 **Installation**
 
-### **Method 1: Direct Use (Current Project)**
-Your plugin is already installed! Just enable it:
+### **Method 1: Direct Use (Assets Library)**
+
 
 1. Go to **Project → Project Settings → Plugins**
 2. Find "OmniState Visual AI"
@@ -1281,3 +1281,5 @@ If you find OmniState AI useful:
 **Status**: ✅ Production Ready
 
 **Start building amazing AI now!** 🚀🎮
+
+## Please note that the generated scripts may contain few syntax errors sometimes, but most of them a indentation errors
