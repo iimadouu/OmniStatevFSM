@@ -408,10 +408,10 @@ You now have a **professional, AAA-quality state machine system** that rivals co
 
 ---
 
-**Version:** 1.1.0  
+**Version:** 1.0.0  
 **Status:** ✅ Production Ready  
 **Quality:** AAA Game Engine Level  
 **Flexibility:** Maximum  
 **Power:** Unlimited  
 
-🎮 **Build amazing AI now!** 🚀
+🎮 **Build amazing FSM now!** 🚀
