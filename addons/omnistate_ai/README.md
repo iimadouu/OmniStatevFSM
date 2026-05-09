@@ -1,14 +1,18 @@
-# OmniState Visual AI
+# OmniState Visual FSM
 
-**Version 1.1.0** | **Released: May 8, 2026** | **Godot 4.x**
+**Version 1.0.1** | **Released: May 9, 2026** | **Godot 4.6.x**
 
-A professional-grade visual state machine editor for Godot 4.x with **AAA-quality transition system**. Create sophisticated AI behaviors through an intuitive node-based interface. Specialized for FPS games but adaptable to any genre.
+A professional-grade visual state machine editor for Godot 4.x with **AAA-quality transition system** and **intelligent auto-recovery**. Create sophisticated AI behaviors through an intuitive node-based interface. Never lose your work - graph persists between sessions and auto-recovers from code files!
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 ![Godot 4.x](https://img.shields.io/badge/Godot-4.x-blue.svg)
-![Version 1.1.0](https://img.shields.io/badge/Version-1.1.0-orange.svg)
+![Version 1.0.1](https://img.shields.io/badge/Version-1.0.1-orange.svg)
 ![Quality: AAA](https://img.shields.io/badge/Quality-AAA-gold.svg)
 
+---
+** Please, If you find this tool helpful, consider helping me grow through my BEP20 USDT wallet: 0xee1e5f87180d91a11a7f4c57eb0a8ea4a40317f9**
+
+![OmniState Preview](Donations.jpg)
 ---
 
 ## 🎯 **What is OmniState AI?**
@@ -18,13 +22,17 @@ OmniState AI transforms AI development from tedious coding into visual design. C
 ### **Key Highlights**
 
 - ✅ **Visual State Machine Editor** - Node-based workflow with drag-and-drop
-- ✅ **AAA Transition System** - 4-tab editor with cooldowns, delays, blending ⭐ NEW!
+- ✅ **AAA Transition System** - 4-tab editor with cooldowns, delays, blending 
+- ✅ **Never Lose Work** - Auto-save on exit, auto-load on startup, auto-recovery from code
+- ✅ **Bidirectional Sync** - Edit in visual editor OR code editor, sync both ways
+- ✅ **Smart Merge** - Add custom functions to generated files, they're preserved
+- ✅ **Auto-Recovery** - Rebuild graph from code files if JSON is lost
 - ✅ **Professional Code Generation** - AAA-quality, well-structured scripts
-- ✅ **Advanced Conditions** - 3 modes + 9 quick presets + syntax highlighting ⭐ NEW!
-- ✅ **Priority System** - Control transition evaluation order (0-100) ⭐ ENHANCED!
-- ✅ **Timing Control** - Cooldowns and delays for realistic behavior ⭐ NEW!
-- ✅ **Animation Blending** - Smooth transitions between animations ⭐ NEW!
-- ✅ **Debug System** - Per-transition logging with colors ⭐ NEW!
+- ✅ **Advanced Conditions** - 3 modes + 9 quick presets + syntax highlighting 
+- ✅ **Priority System** - Control transition evaluation order (0-100)
+- ✅ **Timing Control** - Cooldowns and delays for realistic behavior 
+- ✅ **Animation Blending** - Smooth transitions between animations 
+- ✅ **Debug System** - Per-transition logging with colors 
 - ✅ **Blackboard Variables** - Shared data between states
 - ✅ **Animation Integration** - Auto-detect and assign animations
 - ✅ **State Templates** - Pre-built behaviors for rapid development
@@ -32,10 +40,88 @@ OmniState AI transforms AI development from tedious coding into visual design. C
 
 ---
 
+## 🔄 **Workflow: Never Lose Your Work** ⭐ NEW in v1.0.1
+
+OmniState AI now has **multiple layers of protection** to ensure you never lose your work:
+
+### **Layer 1: Auto-Save on Exit**
+- Graph automatically saves when you close Godot
+- Saves to: `res://ai_states/[fsm_name]/[fsm_name]_graph.json`
+- Includes: nodes, positions, code blocks, transitions, connections
+
+### **Layer 2: Auto-Load on Startup**
+- Graph automatically loads when you open the plugin
+- Seamless continuation of your work
+- No manual save/load needed
+
+### **Layer 3: Auto-Recovery from Code**
+- If graph JSON is missing, automatically rebuilds from generated `.gd` files
+- Scans `res://ai_states/` folder for FSM directories
+- Extracts code from `enter()`, `update()`, `exit()` functions
+- Reconstructs transitions from main FSM file
+- Perfect for version control workflows (add `*_graph.json` to `.gitignore`)
+
+### **Layer 4: Bidirectional Sync**
+- Edit generated `.gd` files in your IDE
+- Click **🔄 Sync from Files** to import changes back to visual editor
+- Best of both worlds: visual design + code editing
+
+### **Layer 5: Smart Merge**
+- Add custom functions to generated files
+- Add custom properties (@export, var, @onready)
+- They're automatically preserved when you regenerate
+- Only `enter()`, `update()`, `exit()` are regenerated
+
+### **Workflow Examples**
+
+**Scenario 1: Normal Development**
+```
+1. Create states in visual editor
+2. Add code to enter/update/exit blocks
+3. Click "💾 Save & Generate"
+4. Close Godot → Auto-saves graph
+5. Reopen Godot → Auto-loads graph
+6. Continue working seamlessly
+```
+
+**Scenario 2: Code-First Editing**
+```
+1. Generate initial FSM from visual editor
+2. Open generated .gd files in VS Code
+3. Edit enter/update/exit functions
+4. Add custom helper functions
+5. Return to visual editor
+6. Click "🔄 Sync from Files"
+7. Visual editor now shows your code changes
+8. Custom functions preserved on next generate
+```
+
+**Scenario 3: Version Control**
+```
+1. Add *_graph.json to .gitignore
+2. Commit only .gd files to Git
+3. Team member clones repo
+4. Opens OmniState AI panel
+5. Auto-recovery rebuilds graph from .gd files
+6. Full visual editor restored automatically
+```
+
+**Scenario 4: Addon Reinstallation**
+```
+1. Delete addon folder
+2. Reinstall addon
+3. Open OmniState AI panel
+4. Auto-recovery finds your ai_states/ folder
+5. Rebuilds entire graph from code files
+6. Back to work in seconds
+```
+
+---
+
 ## 📦 **Installation**
 
-### **Method 1: Direct Use (Current Project)**
-Your plugin is already installed! Just enable it:
+### **Method 1: Direct Use (Assets Library)**
+
 
 1. Go to **Project → Project Settings → Plugins**
 2. Find "OmniState Visual AI"
@@ -48,6 +134,7 @@ Your plugin is already installed! Just enable it:
 3. Enable in Project Settings → Plugins
 
 ---
+
 
 ## 🚀 **Quick Start (5 Minutes)**
 
@@ -132,7 +219,7 @@ if owner.player:
     owner.bb_set("distance_to_player", distance)
 ```
 
-### **Step 5: Connect States with Advanced Transitions** ⭐ NEW!
+### **Step 5: Connect States with Advanced Transitions** 
 
 #### **Patrol → Chase Transition**
 1. Drag from **Patrol** (right blue dot) to **Chase** (left blue dot)
@@ -282,6 +369,16 @@ if owner.has_node("AudioPlayer"):
 
 ## ✨ **Complete Feature List**
 
+### **💾 Persistence & Recovery** ⭐ NEW in v1.0.1
+- **Auto-save on exit** - Graph automatically saves when closing Godot
+- **Auto-load on startup** - Graph automatically loads when opening plugin
+- **Auto-recovery system** - Rebuild graph from generated code files
+- **Bidirectional sync** - Edit code in IDE, sync back to visual editor
+- **Smart merge** - Custom functions preserved during regeneration
+- **Never lose work** - Multiple layers of protection
+- **Version control friendly** - Works with Git workflows
+- **Team collaboration** - Share code, auto-recover graph
+
 ### **🎨 Visual Editor**
 - **GraphEdit-based canvas** - Familiar node workflow
 - **Drag-and-drop** - Intuitive state placement
@@ -306,7 +403,7 @@ if owner.has_node("AudioPlayer"):
 - **Color picker** - Customize node colors
 - **Close button** - Easy deletion with × button
 
-### **🔗 AAA Transition System** ⭐ v1.1.0
+### **🔗 AAA Transition System** ⭐ v1.0.0
 
 #### **4-Tab Advanced Editor**
 Professional transition configuration matching Unreal Engine 5/6:
@@ -340,14 +437,14 @@ Professional transition configuration matching Unreal Engine 5/6:
   - Automatic sorting and evaluation
   - Helpful hints for best practices
   
-- **Cooldown System** ⭐ NEW!
+- **Cooldown System** 
   - Prevent rapid state switching
   - Duration: 0.1 - 60 seconds
   - Per-transition cooldown tracking
   - Prevents state "flickering"
   - Blackboard-based implementation
   
-- **Delay System** ⭐ NEW!
+- **Delay System** 
   - Add deliberate transition delays
   - Duration: 0.1 - 10 seconds
   - Condition must remain true during delay
@@ -355,20 +452,20 @@ Professional transition configuration matching Unreal Engine 5/6:
   - Reaction time simulation
 
 **Tab 3: Advanced**
-- **Interrupt Control** ⭐ NEW!
+- **Interrupt Control** 
   - Can/Cannot interrupt current state
   - Useful for animations that must complete
   - Prevents jarring mid-action transitions
   - State-level control
   
-- **Animation Blending** ⭐ NEW!
+- **Animation Blending** 
   - Smooth transitions between animations
   - Blend time: 0.0 - 2.0 seconds
   - Professional animation quality
   - No sudden animation pops
   - Automatic AnimationPlayer integration
   
-- **Custom Transition Code** ⭐ NEW!
+- **Custom Transition Code** 
   - Execute GDScript when transitioning
   - Play sounds, set variables, trigger events
   - Full code editor with syntax highlighting
@@ -376,13 +473,13 @@ Professional transition configuration matching Unreal Engine 5/6:
   - Access to owner, blackboard, states
 
 **Tab 4: Debug**
-- **Debug Logging** ⭐ NEW!
+- **Debug Logging** 
   - Enable per-transition logging
   - Custom debug labels
   - Track transition execution
   - Console output with timestamps
   
-- **Debug Colors** ⭐ NEW!
+- **Debug Colors** 
   - Assign colors to transitions
   - Color-coded console output
   - Visual identification in logs
@@ -417,7 +514,7 @@ Professional transition configuration matching Unreal Engine 5/6:
 - **Dropdown selection** - Choose per state
 - **Flexible paths** - Any AnimationPlayer location
 - **Automatic playback** - Plays on state enter
-- **Blend support** - Smooth animation transitions ⭐ NEW!
+- **Blend support** - Smooth animation transitions 
 - **Speed control** - Adjust animation speed
 
 ### **📋 State Templates**
@@ -445,8 +542,10 @@ Each template includes:
 - **Error handling** - Warnings and error messages
 - **Helper functions** - Utility methods included
 - **Organized sections** - Clear separation of concerns
-- **Advanced transition logic** - Cooldowns, delays, blending ⭐ NEW!
-- **Debug integration** - Logging code generation ⭐ NEW!
+- **Advanced transition logic** - Cooldowns, delays, blending 
+- **Debug integration** - Logging code generation
+- **Smart merge** - Preserves custom functions and properties ⭐ NEW
+- **Clear headers** - Indicates what's safe to edit vs regenerated ⭐ NEW 
 
 ### **✅ Validation System**
 - **State count** - Verify states exist
@@ -470,7 +569,7 @@ Each template includes:
 
 ## 📚 **Usage Examples**
 
-### **Example 1: Advanced Tactical Shooter AI** ⭐ NEW!
+### **Example 1: Advanced Tactical Shooter AI** 
 
 Complete AI with cooldowns, delays, and blending for realistic behavior.
 
@@ -751,7 +850,7 @@ owner.bb_set("reload_timer", reload_timer)
 
 ---
 
-### **Example 2: Boss Battle with Phases** ⭐ NEW!
+### **Example 2: Boss Battle with Phases** 
 
 Multi-phase boss with dramatic transitions and custom code.
 
@@ -813,7 +912,7 @@ owner.get_node("AudioPlayer").play("enrage_roar")
 
 ---
 
-### **Example 3: Stealth Game Guard** ⭐ NEW!
+### **Example 3: Stealth Game Guard** 
 
 Realistic guard AI with investigation and alert states.
 
@@ -971,19 +1070,14 @@ res://ai_states/your_fsm_name/
 ## 📖 **Documentation**
 
 ### **Complete Guides**
-- **[README.md](README.md)** - This file - Complete documentation with v1.1.0 features
-- **[TRANSITION_SYSTEM.md](TRANSITION_SYSTEM.md)** - Advanced transition system guide ⭐ NEW!
-- **[WHATS_NEW_V1.1.md](WHATS_NEW_V1.1.md)** - v1.1.0 upgrade highlights ⭐ NEW!
-- **[BLACKBOARD_GUIDE.md](BLACKBOARD_GUIDE.md)** - Complete Blackboard tutorial ⭐ NEW!
-- **[QUICK_START_BLACKBOARD.md](QUICK_START_BLACKBOARD.md)** - 5-minute Blackboard guide ⭐ NEW!
+- **[TRANSITION_SYSTEM.md](TRANSITION_SYSTEM.md)** - Advanced transition system guide 
+- **[BLACKBOARD_GUIDE.md](BLACKBOARD_GUIDE.md)** - Complete Blackboard tutorial
+- **[QUICK_START_BLACKBOARD.md](QUICK_START_BLACKBOARD.md)** - 5-minute Blackboard guide
 - **[CHANGELOG.md](CHANGELOG.md)** - Version history and updates
 - **[QUICKSTART.md](QUICKSTART.md)** - 5-minute getting started guide
 - **[EXAMPLES.md](EXAMPLES.md)** - 4+ complete example state machines
-- **[FEATURES.md](FEATURES.md)** - Complete feature list (200+ features)
-- **[WORKING_FEATURES.md](WORKING_FEATURES.md)** - Current working features
-- **[ENHANCEMENTS_ROADMAP.md](ENHANCEMENTS_ROADMAP.md)** - Future plans
 
-### **New in v1.1.0** ⭐
+### **v1.0.0** ⭐
 - **[TRANSITION_SYSTEM.md](TRANSITION_SYSTEM.md)** - Complete guide to the AAA transition system
   - 4-tab editor walkthrough
   - All features explained with examples
@@ -992,15 +1086,9 @@ res://ai_states/your_fsm_name/
   - Performance optimization tips
   - Comparison to Unreal Engine 5/6
 
-- **[WHATS_NEW_V1.1.md](WHATS_NEW_V1.1.md)** - What's new and improved
-  - Feature comparison table (v1.0 vs v1.1)
-  - Upgrade benefits
-  - Migration guide
-  - Quick reference
-
 ### **Quick Reference**
 
-#### **Transition System Features** ⭐ NEW!
+#### **Transition System Features**
 ```
 4-Tab Advanced Editor:
 ├── Conditions Tab
@@ -1143,7 +1231,15 @@ blackboard.get("path_blocked", true) == false
 
 ## 🗺️ **Roadmap**
 
-### **Version 1.1.0** ✅ RELEASED!
+### **Version 1.0.1** ✅ RELEASED! (May 9, 2026)
+- ✅ Graph Persistence (auto-save/load)
+- ✅ Auto-Recovery System (rebuild from code)
+- ✅ Bidirectional Sync (code ↔ visual editor)
+- ✅ Smart Merge (preserve custom code)
+- ✅ Enhanced Documentation
+- ✅ Bug Fixes and Improvements
+
+### **Version 1.0.0** ✅ RELEASED! (May 8, 2026)
 - ✅ AAA-Quality Transition System (4-tab editor)
 - ✅ Cooldown System (prevent flickering)
 - ✅ Delay System (realistic reactions)
@@ -1155,7 +1251,7 @@ blackboard.get("path_blocked", true) == false
 - ✅ Syntax Highlighting
 - ✅ Enhanced Code Generation
 
-### **Version 1.2** (Planned - Q3 2026)
+### **Version 1.1** (Planned - Q3 2026)
 - Save/Load state machine configurations (JSON format)
 - Visual debugging mode (runtime state visualization)
 - More FPS templates (Flank, Suppress, Reload, Grenade)
@@ -1165,7 +1261,7 @@ blackboard.get("path_blocked", true) == false
 - Transition visualization (arrows with labels)
 - Performance profiler (track state execution time)
 
-### **Version 1.3** (Planned - Q4 2026)
+### **Version 1.2** (Planned - Q4 2026)
 - Behavior tree integration (hybrid FSM + BT)
 - Sub-state machines (nested states)
 - Parallel states (multiple active states)
@@ -1199,7 +1295,7 @@ Contributions are welcome! Whether it's:
 
 ## 📄 **License**
 
-MIT License - Free to use in commercial and personal projects!
+MIT License - Free to use in personal projects!
 
 ---
 
@@ -1229,55 +1325,18 @@ If you find OmniState AI useful:
 - Create and share your state machines
 - Contribute improvements
 - Report bugs and suggest features
+- Donations 
 
 ---
 
-## 🎉 **Version 1.1.0 Highlights**
 
-### **What's New:**
-✅ **AAA Transition System** - 4-tab professional editor
-✅ **Cooldown System** - Prevent state flickering
-✅ **Delay System** - Realistic reaction times
-✅ **Interrupt Control** - Protect important animations
-✅ **Animation Blending** - Smooth transitions (0-2s)
-✅ **Custom Code** - Execute logic on transitions
-✅ **Debug Logging** - Per-transition with colors
-✅ **9 Quick Presets** - One-click condition insertion
-✅ **Syntax Highlighting** - Professional code editors
-✅ **Enhanced Generation** - Advanced transition logic
-
-### **Quality Level:**
-🏆 **AAA Game Engine Quality**
-- Matches Unreal Engine 5/6
-- Matches Unity Animator Controller
-- Professional-grade features
-- Production-ready code
-- Scalable to any complexity
-
----
-
-**Version:** 1.1.0  
-**Release Date:** May 8, 2026  
-**Godot Version:** 4.x (4.0, 4.1, 4.2, 4.3+)  
-**Status:** ✅ Production Ready  
-**Quality:** AAA Game Engine Level  
-**License:** MIT (Free for commercial use)
-
-**Start building amazing AI now!** 🚀🎮
-
----
-
-*Last Updated: May 8, 2026*  
-*Documentation Version: 1.1.0*  
-*Plugin Version: 1.1.0*
-- Create and share your state machines
-- Contribute improvements
-
----
-
-**Version**: 1.0.0  
-**Release Date**: May 8, 2026  
+**Version**: 1.0.1
+*Documentation Version: 1.0.1*  
+**Release Date**: May 9, 2026  
+*Last Updated: May 9, 2026* 
 **Godot Version**: 4.6.2 
 **Status**: ✅ Production Ready
 
 **Start building amazing AI now!** 🚀🎮
+
+## Please note that the generated scripts may contain few syntax errors sometimes, but most of them a indentation errors

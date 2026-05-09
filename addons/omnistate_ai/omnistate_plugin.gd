@@ -29,7 +29,10 @@ var connection_to: String = ""
 
 func _enter_tree():
 	print("🎮 OmniState AI: Loading...")
-	_build_ui()
+	# Load the main panel from the separate file
+	var MainPanelScript = load("res://addons/omnistate_ai/ui/main_panel.gd")
+	main_panel = MainPanelScript.new()
+	main_panel.editor_plugin = self
 	add_control_to_bottom_panel(main_panel, "OmniState AI")
 	print("✓ OmniState AI: Ready! Click the tab at bottom.")
 
