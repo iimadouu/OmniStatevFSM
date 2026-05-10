@@ -1,455 +1,235 @@
 # OmniState AI - Quick Start Guide
 
-Get your AI up and running in 5 minutes!
+## 🚀 **Quick Start (5 Minutes)**
 
-## Step 1: Enable the Plugin (30 seconds)
+### **Step 1: Enable & Configure**
+1. Enable the plugin (see Installation above)
+2. Click **⚙ Setup** in the OmniState AI panel
+3. Configure:
+   - **Script Name**: `enemy_ai`
+   - **Base Class**: `CharacterBody3D`
+   - **Enemy Scene**: `res://scenes/enemy.tscn` (optional)
+   - **AnimationPlayer Path**: `AnimationPlayer`
+4. Click **🔍 Detect Animations** (if you provided enemy scene)
+5. Click **OK**
 
-1. Go to **Project → Project Settings → Plugins**
-2. Find "OmniState Visual AI" and check the **Enable** checkbox
-3. The plugin panel will appear at the bottom of your editor
+### **Step 2: Add Blackboard Variables**
+1. Click **📊 Blackboard**
+2. Add these variables:
+   - `player_detected` (bool) = false
+   - `distance_to_player` (float) = 999.0
+   - `health` (int) = 100
+   - `can_see_player` (bool) = false
+3. Click **Close**
 
-## Step 2: Prepare Your Enemy Scene (2 minutes)
+### **Step 3: Create States**
+1. Click **📋 Templates** → **Patrol** (mark as Initial State in Basic tab)
+2. Click **📋 Templates** → **Chase**
+3. Click **📋 Templates** → **Attack**
 
-Your enemy needs:
-- A root node (CharacterBody3D, CharacterBody2D, etc.)
-- An **AnimationPlayer** node with animations
-- Optional: NavigationAgent3D for pathfinding
+### **Step 4: Add Logic**
 
-Example structure:
-```
-Enemy (CharacterBody3D)
-├── CollisionShape3D
-├── Model (Node3D)
-│   └── MeshInstance3D
-├── AnimationPlayer  ← Important!
-│   ├── idle
-│   ├── walk
-│   ├── run
-│   └── attack
-└── NavigationAgent3D (optional)
-```
-
-## Step 3: Configure the FSM (1 minute)
-
-1. Click **⚙ Setup Wizard** in the OmniState AI panel
-2. Fill in:
-   - **Script Name**: `enemy_ai` (or whatever you want)
-   - **Base Class**: Select your enemy's root node type
-   - **Enemy Scene Path**: Browse to your enemy scene
-   - **AnimationPlayer Path**: Usually just `AnimationPlayer`
-3. Click **Detect Animations Now** to auto-detect your animations
-4. Click **OK**
-
-## Step 4: Build Your State Machine (1 minute)
-
-### Quick Method - Use Templates:
-1. Right-click on the canvas
-2. Select **Add from Template → Patrol**
-3. Repeat for **Chase** and **Attack**
-4. Mark **Patrol** as the initial state (check "Initial State" in Basic tab)
-
-### Connect the States:
-1. Drag from Patrol's output (right side) to Chase's input (left side)
-2. Enter condition: `player_detected`
-3. Drag from Chase to Attack
-4. Enter condition: `in_attack_range`
-5. Drag from Attack back to Chase
-6. Enter condition: `player_out_of_range`
-
-## Step 5: Generate and Use (30 seconds)
-
-1. Click **✓ Validate** to check for errors
-2. Click **💾 Save & Generate**
-3. Your scripts are now in `res://ai_states/enemy_ai/`
-4. Attach `enemy_ai.gd` to your enemy scene's root node
-5. Run your game!
-
-## What You Get
-
-Generated files:
-- `enemy_ai.gd` - Main FSM controller (attach this to your enemy)
-- `patrol_state.gd` - Patrol behavior
-- `chase_state.gd` - Chase behavior
-- `attack_state.gd` - Attack behavior
-- `state.gd` - Base class for all states
-- `blackboard.gd` - Shared data storage
-
-## Customizing the Behavior
-
-### Add Player Detection
-
-In your enemy's `_ready()` function (or in the generated script):
-
+**Patrol State - Update Tab:**
 ```gdscript
-func _physics_process(delta):
-	super._physics_process(delta)
-	
-	# Update blackboard with player detection
-	if player:
-		var distance = global_position.distance_to(player.global_position)
-		blackboard.set_value("player_detected", distance < 20.0)
-		blackboard.set_value("in_attack_range", distance < 5.0)
-		blackboard.set_value("player_out_of_range", distance > 7.0)
+# Detect player
+if owner.player:
+    var distance = owner.global_position.distance_to(owner.player.global_position)
+    owner.bb_set("distance_to_player", distance)
+    owner.bb_set("player_detected", distance < 20.0)
+    
+    # Check line of sight
+    var space_state = owner.get_world_3d().direct_space_state
+    var query = PhysicsRayQueryParameters3D.create(
+        owner.global_position,
+        owner.player.global_position
+    )
+    var result = space_state.intersect_ray(query)
+    owner.bb_set("can_see_player", result.is_empty() or result.collider == owner.player)
 ```
 
-### Customize State Behavior
-
-Edit the generated state files to add your specific logic:
-
-**patrol_state.gd**:
+**Chase State - Update Tab:**
 ```gdscript
-func update(delta: float):
-	# Your patrol logic here
-	var patrol_points = blackboard.get_value("patrol_points", [])
-	if patrol_points.is_empty():
-		return
-	
-	# Move to next patrol point
-	# ... your code ...
+# Chase player
+if owner.player:
+    var direction = (owner.player.global_position - owner.global_position).normalized()
+    owner.velocity = direction * 6.0
+    owner.move_and_slide()
+    owner.look_at(owner.player.global_position, Vector3.UP)
+    
+    # Update distance
+    var distance = owner.global_position.distance_to(owner.player.global_position)
+    owner.bb_set("distance_to_player", distance)
 ```
 
-**attack_state.gd**:
+**Attack State - Update Tab:**
 ```gdscript
-func update(delta: float):
-	var player = get_player()
-	if not player:
-		return
-	
-	# Look at player
-	var owner_node = get_owner()
-	owner_node.look_at(player.global_position, Vector3.UP)
-	
-	# Attack logic
-	var timer = blackboard.get_value("attack_timer", 0.0)
-	timer += delta
-	
-	if timer >= 1.0:  # Attack every second
-		_perform_attack()
-		blackboard.set_value("attack_timer", 0.0)
-	else:
-		blackboard.set_value("attack_timer", timer)
-
-func _perform_attack():
-	print("Attacking player!")
-	# Your attack logic here
+# Attack player
+if owner.player:
+    owner.look_at(owner.player.global_position, Vector3.UP)
+    
+    # Simple attack logic
+    var attack_timer = owner.bb_get("attack_timer", 0.0)
+    attack_timer += delta
+    
+    if attack_timer >= 1.0:  # Attack every second
+        print("Attacking player!")
+        # Add your attack logic here
+        attack_timer = 0.0
+    
+    owner.bb_set("attack_timer", attack_timer)
+    
+    # Update distance
+    var distance = owner.global_position.distance_to(owner.player.global_position)
+    owner.bb_set("distance_to_player", distance)
 ```
 
-## Common Patterns
+### **Step 5: Connect States with Advanced Transitions** 
 
-### Player Detection with Raycast
+#### **Patrol → Chase Transition**
+1. Drag from **Patrol** (right blue dot) to **Chase** (left blue dot)
+2. **Advanced Transition Editor** opens with 4 tabs:
 
+**Conditions Tab:**
+- Mode: Simple Expression
+- Click preset: **"Player Detected"** (inserts condition)
+- Or manually enter: `blackboard.get("player_detected", false) and blackboard.get("can_see_player", false)`
+
+**Priority & Timing Tab:**
+- Priority: `10`
+- Enable Cooldown: ✅ (checked)
+- Cooldown Duration: `1.0` seconds (prevents rapid switching)
+- Enable Delay: ✅ (checked)
+- Delay Duration: `0.3` seconds (reaction time)
+
+**Advanced Tab:**
+- Can Interrupt: ✅ (checked)
+- Enable Animation Blend: ✅ (checked)
+- Blend Duration: `0.2` seconds
+
+**Debug Tab:**
+- Enable Debug Logging: ✅ (checked)
+- Debug Label: `"Player spotted - begin chase"`
+- Debug Color: Yellow
+
+3. Click **"Create Transition"**
+
+#### **Chase → Attack Transition**
+1. Drag from **Chase** to **Attack**
+
+**Conditions Tab:**
+- Click preset: **"In Range"**
+- Modify to: `blackboard.get("distance_to_player", 999) < 5.0 and blackboard.get("can_see_player", false)`
+
+**Priority & Timing Tab:**
+- Priority: `5` (higher priority than returning to patrol)
+- Enable Cooldown: ✅
+- Cooldown Duration: `0.5` seconds
+
+**Advanced Tab:**
+- Can Interrupt: ✅
+- Enable Animation Blend: ✅
+- Blend Duration: `0.15` seconds
+- Custom Code:
 ```gdscript
-func can_see_player() -> bool:
-	var player = blackboard.get_value("player")
-	if not player:
-		return false
-	
-	var space_state = get_world_3d().direct_space_state
-	var query = PhysicsRayQueryParameters3D.create(
-		global_position + Vector3.UP,  # From enemy eye level
-		player.global_position + Vector3.UP
-	)
-	query.exclude = [self]
-	
-	var result = space_state.intersect_ray(query)
-	return result.is_empty() or result.collider == player
+# Play attack sound
+if owner.has_node("AudioPlayer"):
+    owner.get_node("AudioPlayer").play()
 ```
 
-### Navigation with NavigationAgent3D
+**Debug Tab:**
+- Enable Debug Logging: ✅
+- Debug Label: `"Engaging target - attack range"`
+- Debug Color: Red
 
-```gdscript
-func update(delta: float):
-	var nav_agent = blackboard.get_value("navigation_agent")
-	if not nav_agent or nav_agent.is_navigation_finished():
-		return
-	
-	var next_position = nav_agent.get_next_path_position()
-	var owner_node = get_owner()
-	var direction = (next_position - owner_node.global_position).normalized()
-	
-	owner_node.velocity = direction * 5.0
-	owner_node.move_and_slide()
+2. Click **"Create Transition"**
+
+#### **Attack → Chase Transition**
+1. Drag from **Attack** to **Chase**
+
+**Conditions Tab:**
+- Expression: `blackboard.get("distance_to_player", 999) > 7.0`
+
+**Priority & Timing Tab:**
+- Priority: `15`
+- Enable Cooldown: ✅
+- Cooldown Duration: `1.0` seconds
+- Enable Delay: ✅
+- Delay Duration: `0.5` seconds (don't chase immediately)
+
+**Advanced Tab:**
+- Can Interrupt: ✅
+- Enable Animation Blend: ✅
+- Blend Duration: `0.2` seconds
+
+**Debug Tab:**
+- Enable Debug Logging: ✅
+- Debug Label: `"Target out of range - resume chase"`
+- Debug Color: Orange
+
+2. Click **"Create Transition"**
+
+#### **Chase → Patrol Transition** (Fallback)
+1. Drag from **Chase** to **Patrol**
+
+**Conditions Tab:**
+- Expression: `not blackboard.get("player_detected", false) or not blackboard.get("can_see_player", false)`
+
+**Priority & Timing Tab:**
+- Priority: `50` (lower priority - fallback)
+- Enable Delay: ✅
+- Delay Duration: `3.0` seconds (give up after 3 seconds)
+
+**Advanced Tab:**
+- Can Interrupt: ✅
+- Enable Animation Blend: ✅
+- Blend Duration: `0.3` seconds
+
+**Debug Tab:**
+- Enable Debug Logging: ✅
+- Debug Label: `"Lost player - return to patrol"`
+- Debug Color: Gray
+
+2. Click **"Create Transition"**
+
+### **Step 6: Generate & Use**
+1. Click **💾 Generate**
+2. Check console for success message:
+```
+============================================================
+🚀 GENERATING STATE MACHINE: enemy_ai
+============================================================
+✓ Generated professional main FSM with transitions and blackboard
+✓ Generated state: patrol
+✓ Generated state: chase
+✓ Generated state: attack
+============================================================
+✓ GENERATION COMPLETE!
+📁 Location: res://ai_states/enemy_ai/
+📄 Main script: enemy_ai.gd
+📄 State files: 3 files
+============================================================
 ```
 
-### Health-Based Transitions
+3. Find scripts in `res://ai_states/enemy_ai/`
+4. Attach `enemy_ai.gd` to your enemy's root node
+5. Add player to "player" group:
+   - Select player node
+   - Inspector → Node → Groups
+   - Add "player" group
+6. Run your game! 🎮
 
-```gdscript
-# In your enemy script
-func _physics_process(delta):
-	super._physics_process(delta)
-	
-	# Update health status in blackboard
-	blackboard.set_value("health_low", health < 30)
-	blackboard.set_value("health_critical", health < 10)
-```
+### **What You'll See:**
+- Enemy patrols initially
+- Detects player within 20 units
+- Waits 0.3 seconds (reaction time)
+- Smoothly transitions to chase (0.2s blend)
+- Chases player with smooth movement
+- Attacks when within 5 units
+- Returns to chase if player moves away (7+ units)
+- Returns to patrol if player lost for 3 seconds
+- All transitions logged in console with colors!
 
-Then use `health_low` or `health_critical` as transition conditions!
-
-## Tips
-
-1. **Start Simple**: Begin with 2-3 states, test, then expand
-2. **Use Blackboard**: Share data between states via the blackboard
-3. **Test Often**: Generate and test after each major change
-4. **Validate First**: Always validate before generating
-5. **Read Generated Code**: The generated code is meant to be read and customized!
-
-## Next Steps
-
-- Add more complex states (Cover, Flee, Investigate)
-- Implement advanced behaviors (flanking, group tactics)
-- Add sound effects and particles to state transitions
-- Create multiple AI types with different state machines
-- Use the blackboard for team coordination
-
-## Troubleshooting
-
-**"Player not found"**
-- Add your player to a group called "player"
-- Or manually set: `blackboard.set_value("player", player_node)`
-
-**"Animation not playing"**
-- Check AnimationPlayer path in Setup Wizard
-- Verify animation names match your AnimationPlayer
-
-**"Enemy not moving"**
-- Ensure you're calling `move_and_slide()` in state update code
-- Check that velocity is being set
-
-**"Transitions not working"**
-- Make sure conditions are being set in blackboard
-- Use `print()` to debug condition values
-- Check transition conditions in the Transitions tab
-
-## Need Help?
-
-- Check the full README.md for detailed documentation
-- Examine the generated code - it's well-commented!
-- Look at the state templates for examples
-- Validate your state machine for errors
-
-Happy AI building! 🤖
-
-# OmniState AI - Quick Start Guide
-
-Get your AI up and running in 5 minutes!
-
-## Step 1: Enable the Plugin (30 seconds)
-
-1. Go to **Project → Project Settings → Plugins**
-2. Find "OmniState Visual AI" and check the **Enable** checkbox
-3. The plugin panel will appear at the bottom of your editor
-
-## Step 2: Prepare Your Enemy Scene (2 minutes)
-
-Your enemy needs:
-- A root node (CharacterBody3D, CharacterBody2D, etc.)
-- An **AnimationPlayer** node with animations
-- Optional: NavigationAgent3D for pathfinding
-
-Example structure:
-```
-Enemy (CharacterBody3D)
-├── CollisionShape3D
-├── Model (Node3D)
-│   └── MeshInstance3D
-├── AnimationPlayer  ← Important!
-│   ├── idle
-│   ├── walk
-│   ├── run
-│   └── attack
-└── NavigationAgent3D (optional)
-```
-
-## Step 3: Configure the FSM (1 minute)
-
-1. Click **⚙ Setup Wizard** in the OmniState AI panel
-2. Fill in:
-   - **Script Name**: `enemy_ai` (or whatever you want)
-   - **Base Class**: Select your enemy's root node type
-   - **Enemy Scene Path**: Browse to your enemy scene
-   - **AnimationPlayer Path**: Usually just `AnimationPlayer`
-3. Click **Detect Animations Now** to auto-detect your animations
-4. Click **OK**
-
-## Step 4: Build Your State Machine (1 minute)
-
-### Quick Method - Use Templates:
-1. Right-click on the canvas
-2. Select **Add from Template → Patrol**
-3. Repeat for **Chase** and **Attack**
-4. Mark **Patrol** as the initial state (check "Initial State" in Basic tab)
-
-### Connect the States:
-1. Drag from Patrol's output (right side) to Chase's input (left side)
-2. Enter condition: `player_detected`
-3. Drag from Chase to Attack
-4. Enter condition: `in_attack_range`
-5. Drag from Attack back to Chase
-6. Enter condition: `player_out_of_range`
-
-## Step 5: Generate and Use (30 seconds)
-
-1. Click **✓ Validate** to check for errors
-2. Click **💾 Save & Generate**
-3. Your scripts are now in `res://ai_states/enemy_ai/`
-4. Attach `enemy_ai.gd` to your enemy scene's root node
-5. Run your game!
-
-## What You Get
-
-Generated files:
-- `enemy_ai.gd` - Main FSM controller (attach this to your enemy)
-- `patrol_state.gd` - Patrol behavior
-- `chase_state.gd` - Chase behavior
-- `attack_state.gd` - Attack behavior
-- `state.gd` - Base class for all states
-- `blackboard.gd` - Shared data storage
-
-## Customizing the Behavior
-
-### Add Player Detection
-
-In your enemy's `_ready()` function (or in the generated script):
-
-```gdscript
-func _physics_process(delta):
-	super._physics_process(delta)
-	
-	# Update blackboard with player detection
-	if player:
-		var distance = global_position.distance_to(player.global_position)
-		blackboard.set_value("player_detected", distance < 20.0)
-		blackboard.set_value("in_attack_range", distance < 5.0)
-		blackboard.set_value("player_out_of_range", distance > 7.0)
-```
-
-### Customize State Behavior
-
-Edit the generated state files to add your specific logic:
-
-**patrol_state.gd**:
-```gdscript
-func update(delta: float):
-	# Your patrol logic here
-	var patrol_points = blackboard.get_value("patrol_points", [])
-	if patrol_points.is_empty():
-		return
-	
-	# Move to next patrol point
-	# ... your code ...
-```
-
-**attack_state.gd**:
-```gdscript
-func update(delta: float):
-	var player = get_player()
-	if not player:
-		return
-	
-	# Look at player
-	var owner_node = get_owner()
-	owner_node.look_at(player.global_position, Vector3.UP)
-	
-	# Attack logic
-	var timer = blackboard.get_value("attack_timer", 0.0)
-	timer += delta
-	
-	if timer >= 1.0:  # Attack every second
-		_perform_attack()
-		blackboard.set_value("attack_timer", 0.0)
-	else:
-		blackboard.set_value("attack_timer", timer)
-
-func _perform_attack():
-	print("Attacking player!")
-	# Your attack logic here
-```
-
-## Common Patterns
-
-### Player Detection with Raycast
-
-```gdscript
-func can_see_player() -> bool:
-	var player = blackboard.get_value("player")
-	if not player:
-		return false
-	
-	var space_state = get_world_3d().direct_space_state
-	var query = PhysicsRayQueryParameters3D.create(
-		global_position + Vector3.UP,  # From enemy eye level
-		player.global_position + Vector3.UP
-	)
-	query.exclude = [self]
-	
-	var result = space_state.intersect_ray(query)
-	return result.is_empty() or result.collider == player
-```
-
-### Navigation with NavigationAgent3D
-
-```gdscript
-func update(delta: float):
-	var nav_agent = blackboard.get_value("navigation_agent")
-	if not nav_agent or nav_agent.is_navigation_finished():
-		return
-	
-	var next_position = nav_agent.get_next_path_position()
-	var owner_node = get_owner()
-	var direction = (next_position - owner_node.global_position).normalized()
-	
-	owner_node.velocity = direction * 5.0
-	owner_node.move_and_slide()
-```
-
-### Health-Based Transitions
-
-```gdscript
-# In your enemy script
-func _physics_process(delta):
-	super._physics_process(delta)
-	
-	# Update health status in blackboard
-	blackboard.set_value("health_low", health < 30)
-	blackboard.set_value("health_critical", health < 10)
-```
-
-Then use `health_low` or `health_critical` as transition conditions!
-
-## Tips
-
-1. **Start Simple**: Begin with 2-3 states, test, then expand
-2. **Use Blackboard**: Share data between states via the blackboard
-3. **Test Often**: Generate and test after each major change
-4. **Validate First**: Always validate before generating
-5. **Read Generated Code**: The generated code is meant to be read and customized!
-
-## Next Steps
-
-- Add more complex states (Cover, Flee, Investigate)
-- Implement advanced behaviors (flanking, group tactics)
-- Add sound effects and particles to state transitions
-- Create multiple AI types with different state machines
-- Use the blackboard for team coordination
-
-## Troubleshooting
-
-**"Player not found"**
-- Add your player to a group called "player"
-- Or manually set: `blackboard.set_value("player", player_node)`
-
-**"Animation not playing"**
-- Check AnimationPlayer path in Setup Wizard
-- Verify animation names match your AnimationPlayer
-
-**"Enemy not moving"**
-- Ensure you're calling `move_and_slide()` in state update code
-- Check that velocity is being set
-
-**"Transitions not working"**
-- Make sure conditions are being set in blackboard
-- Use `print()` to debug condition values
-- Check transition conditions in the Transitions tab
+---
 
 ## Need Help?
 
