@@ -79,3 +79,9 @@ Condition: blackboard.get("player_detected", false)
 - MIT License (see LICENSE).
 - Open issues for bugs or feature requests.
 - Star the repo if you find it helpful!
+-
+---
+### Please, If you find this tool helpful, consider helping me grow through my BEP20 USDT wallet: 0xee1e5f87180d91a11a7f4c57eb0a8ea4a40317f9**
+
+![OmniState Preview](Donations.jpg)
+---
