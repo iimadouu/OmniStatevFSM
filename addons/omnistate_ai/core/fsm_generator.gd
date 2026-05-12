@@ -66,7 +66,7 @@ static func _generate_main_fsm(
 	code += "# FSM Components\n"
 	code += "@onready var animation_player: AnimationPlayer = $" + anim_player_path + "\n"
 	code += "@onready var blackboard: Blackboard = Blackboard.new()\n\n"
-	
+		
 	code += "# State Management\n"
 	code += "var current_state: State = null\n"
 	code += "var states: Dictionary = {}\n"
@@ -140,7 +140,7 @@ static func _generate_main_fsm(
 	code += "\tfor transition in transitions:\n"
 	code += "\t\t# Cooldown check\n"
 	code += "\t\tvar cooldown_key = \"_cd_\" + transition.to_state\n"
-	code += "\t\tvar last_fire = blackboard.get_value(cooldown_key) if blackboard.has_value(cooldown_key) else 0.0\n"
+	code += "\t\tvar last_fire = blackboard.get_value(cooldown_key, 0.0)  # Always provide default\n"
 	code += "\t\tvar cooldown = transition.get(\"cooldown\", 0.0)\n"
 	code += "\t\tif cooldown > 0.0 and now - last_fire < cooldown:\n"
 	code += "\t\t\tcontinue\n"
@@ -152,7 +152,7 @@ static func _generate_main_fsm(
 	code += "\t\t\t\tif not blackboard.has_value(delay_key):\n"
 	code += "\t\t\t\t\tblackboard.set_value(delay_key, now)\n"
 	code += "\t\t\t\t\tcontinue\n"
-	code += "\t\t\t\telif now - blackboard.get_value(delay_key) < delay:\n"
+	code += "\t\t\t\telif now - blackboard.get_value(delay_key, 0.0) < delay:  # Always provide default\n"
 	code += "\t\t\t\t\tcontinue\n"
 	code += "\t\t\t# Fire transition\n"
 	code += "\t\t\tblackboard.set_value(cooldown_key, now)\n"
@@ -178,20 +178,34 @@ static func _generate_main_fsm(
 	
 	# Evaluate condition
 	code += "func _evaluate_condition(condition: String) -> bool:\n"
-	code += "\t# Simple condition evaluation\n"
-	code += "\t# You can extend this with more complex logic\n"
 	code += "\tif condition == \"\":\n"
 	code += "\t\treturn false\n\n"
-	code += "\t# Check blackboard values\n"
+	code += "\t# Direct blackboard key lookup (simple bool flag)\n"
 	code += "\tif blackboard.has_value(condition):\n"
-	code += "\t\treturn blackboard.get_value(condition)\n\n"
-	code += "\t# Try to evaluate as expression\n"
+	code += "\t\tvar v = blackboard.get_value(condition)\n"
+	code += "\t\tif v is bool:\n"
+	code += "\t\t\treturn v\n\n"
+	code += "\t# Replace blackboard.get() calls with direct data dictionary access\n"
+	code += "\t# This fixes the Expression.execute() error with custom object methods\n"
+	code += "\tvar processed_condition = condition\n"
+	code += "\tvar regex = RegEx.new()\n"
+	code += "\tregex.compile(\"blackboard\\\\.get\\\\(([^)]+)\\\\)\")\n"
+	code += "\tvar matches = regex.search_all(condition)\n"
+	code += "\tfor match_obj in matches:\n"
+	code += "\t\tvar full_match = match_obj.get_string()\n"
+	code += "\t\tvar args = match_obj.get_string(1)\n"
+	code += "\t\t# Replace blackboard.get(key, default) with blackboard.data.get(key, default)\n"
+	code += "\t\tprocessed_condition = processed_condition.replace(full_match, \"blackboard.data.get(\" + args + \")\")\n\n"
+	code += "\t# Evaluate as GDScript expression with blackboard in scope\n"
 	code += "\tvar expression = Expression.new()\n"
-	code += "\tvar error = expression.parse(condition)\n"
+	code += "\tvar error = expression.parse(processed_condition, [\"blackboard\", \"owner\"])\n"
 	code += "\tif error == OK:\n"
-	code += "\t\tvar result = expression.execute([], self)\n"
+	code += "\t\tvar result = expression.execute(\n"
+	code += "\t\t\t[blackboard, self],\n"
+	code += "\t\t\tself, true\n"
+	code += "\t\t)\n"
 	code += "\t\tif not expression.has_execute_failed():\n"
-	code += "\t\t\treturn result\n\n"
+	code += "\t\t\treturn bool(result)\n\n"
 	code += "\treturn false\n\n"
 	
 	# Helper functions
@@ -204,6 +218,15 @@ static func _generate_main_fsm(
 	
 	code += "func force_state(state_name: String):\n"
 	code += "\tchange_state(state_name)\n\n"
+	
+	# bb_get / bb_set convenience wrappers so state code can call owner.bb_get() / owner.bb_set()
+	code += "# Blackboard convenience wrappers\n"
+	code += "func bb_set(key: String, value) -> void:\n"
+	code += "\tblackboard.set_value(key, value)\n\n"
+	code += "func bb_get(key: String, default = null):\n"
+	code += "\treturn blackboard.get_value(key, default)\n\n"
+	code += "func bb_has(key: String) -> bool:\n"
+	code += "\treturn blackboard.has_value(key)\n\n"
 	
 	# Save file
 	var file = FileAccess.open(dir_path + script_name + ".gd", FileAccess.WRITE)
@@ -277,18 +300,21 @@ static func _generate_state_script(dir_path: String, node, all_nodes: Array, con
 		var cooldown = trans.get("cooldown", 0.0)
 		var can_interrupt = trans.get("can_interrupt", true)
 		var blend_time = trans.get("blend_time", 0.0)
-		var custom_code = trans.get("custom_code", "").replace("\"", "\\\"").replace("\n", "\\n")
+		# Escape ALL string values that will be embedded inside double-quoted GDScript strings
+		var to_state_esc = trans.to_state.replace("\"", "\\\"")
+		var condition_esc = trans.get("condition", "").replace("\"", "\\\"").replace("\n", "\\n")
+		var custom_code_esc = trans.get("custom_code", "").replace("\"", "\\\"").replace("\n", "\\n")
+		var debug_label_esc = trans.get("debug_label", "").replace("\"", "\\\"")
 		var debug_log = trans.get("debug_log", false)
-		var debug_label = trans.get("debug_label", "").replace("\"", "\\\"")
-		code += "\t\t{\"to_state\": \"" + trans.to_state + "\", \"condition\": \"" + trans.condition + "\""
+		code += "\t\t{\"to_state\": \"" + to_state_esc + "\", \"condition\": \"" + condition_esc + "\""
 		code += ", \"priority\": " + str(priority)
 		code += ", \"delay\": " + str(delay)
 		code += ", \"cooldown\": " + str(cooldown)
 		code += ", \"can_interrupt\": " + str(can_interrupt).to_lower()
 		code += ", \"blend_time\": " + str(blend_time)
-		code += ", \"custom_code\": \"" + custom_code + "\""
+		code += ", \"custom_code\": \"" + custom_code_esc + "\""
 		code += ", \"debug_log\": " + str(debug_log).to_lower()
-		code += ", \"debug_label\": \"" + debug_label + "\""
+		code += ", \"debug_label\": \"" + debug_label_esc + "\""
 		code += "},\n"
 	code += "\t]\n\n"
 	
@@ -475,6 +501,11 @@ static func _generate_base_state(dir_path: String):
 	code += "var state_machine = null\n"
 	code += "var blackboard: Blackboard = null\n\n"
 	
+	# 'owner' is a convenience alias for state_machine so state code can write owner.bb_get() etc.
+	code += "var owner: Node:\n"
+	code += "\tget:\n"
+	code += "\t\treturn state_machine\n\n"
+	
 	code += "func get_state_name() -> String:\n"
 	code += "\treturn \"base_state\"\n\n"
 	
@@ -497,6 +528,35 @@ static func _generate_base_state(dir_path: String):
 	code += "func get_player():\n"
 	code += "\treturn blackboard.get_value(\"player\") if blackboard else null\n\n"
 	
+	code += "# Safety check for node validity\n"
+	code += "func is_valid_and_ready() -> bool:\n"
+	code += "\tvar owner_node = get_owner()\n"
+	code += "\tif not owner_node or not is_instance_valid(owner_node):\n"
+	code += "\t\treturn false\n"
+	code += "\tif not owner_node.is_inside_tree():\n"
+	code += "\t\treturn false\n"
+	code += "\treturn true\n\n"
+	
+	# _set_anim helper — clears all AnimationTree conditions then sets the new one
+	code += "# Animation helper — clears all AnimationTree conditions then activates the given one.\n"
+	code += "# Usage in Enter/Update/Exit code: _set_anim(\"is_idle\")\n"
+	code += "func _set_anim(anim_condition: String) -> void:\n"
+	code += "\tvar owner_node = get_owner()\n"
+	code += "\tif not owner_node:\n"
+	code += "\t\treturn\n"
+	code += "\tvar anim_tree = owner_node.get_node_or_null(\"AnimationTree\")\n"
+	code += "\tif not anim_tree:\n"
+	code += "\t\treturn\n"
+	code += "\tvar all_conditions = [\n"
+	code += "\t\t\"is_idle\", \"is_patrolling\", \"is_chasing\", \"is_shooting\",\n"
+	code += "\t\t\"is_covering_stand\", \"is_covering_crouch\", \"is_reloading\",\n"
+	code += "\t\t\"is_throwing_grenade\", \"is_flanking\", \"is_dead\"\n"
+	code += "\t]\n"
+	code += "\tfor cond in all_conditions:\n"
+	code += "\t\tanim_tree.set(\"parameters/conditions/\" + cond, false)\n"
+	code += "\tif anim_condition != \"\":\n"
+	code += "\t\tanim_tree.set(\"parameters/conditions/\" + anim_condition, true)\n\n"
+	
 	var file = FileAccess.open(dir_path + "state.gd", FileAccess.WRITE)
 	file.store_string(code)
 	file.close()
@@ -518,7 +578,11 @@ static func _generate_blackboard(dir_path: String):
 	code += "\tdata[key] = value\n\n"
 	
 	code += "func get_value(key: String, default = null):\n"
-	code += "\treturn data.get(key, default)\n\n"
+	code += "\tvar value = data.get(key, default)\n"
+	code += "\t# If value is explicitly null, return the default instead\n"
+	code += "\tif value == null:\n"
+	code += "\t\treturn default\n"
+	code += "\treturn value\n\n"
 	
 	code += "func has_value(key: String) -> bool:\n"
 	code += "\treturn data.has(key)\n\n"
