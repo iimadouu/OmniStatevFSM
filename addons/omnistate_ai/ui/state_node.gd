@@ -331,8 +331,20 @@ func get_state_name() -> String:
 func is_initial_state() -> bool:
 	return is_initial_state_check.button_pressed
 
-func add_transition_condition(to_state: String, condition: String):
-	transitions.append({"to_state": to_state, "condition": condition})
+func add_transition_condition(to_state: String, condition: String, settings: Dictionary = {}):
+	var entry = {
+		"to_state": to_state,
+		"condition": condition,
+		"priority": settings.get("priority", 10),
+		"delay": settings.get("delay", 0.0),
+		"cooldown": settings.get("cooldown", 0.0),
+		"can_interrupt": settings.get("can_interrupt", true),
+		"blend_time": settings.get("blend_time", 0.0),
+		"custom_code": settings.get("custom_code", ""),
+		"debug_log": settings.get("debug_log", false),
+		"debug_label": settings.get("debug_label", ""),
+	}
+	transitions.append(entry)
 	refresh_transitions_display()
 
 func refresh_transitions_display():
@@ -341,19 +353,37 @@ func refresh_transitions_display():
 		child.queue_free()
 	
 	# Add each transition
-	for trans in transitions:
+	for i in range(transitions.size()):
+		var trans = transitions[i]
 		var trans_item = HBoxContainer.new()
 		conditions_container.add_child(trans_item)
 		
 		var label = Label.new()
-		label.text = "→ " + trans.to_state + " when: " + trans.condition
+		var priority_str = " [P:%d]" % trans.get("priority", 10)
+		var delay_str = " [D:%.1fs]" % trans.get("delay", 0.0) if trans.get("delay", 0.0) > 0 else ""
+		var cooldown_str = " [CD:%.1fs]" % trans.get("cooldown", 0.0) if trans.get("cooldown", 0.0) > 0 else ""
+		label.text = "→ %s  when: %s%s%s%s" % [trans.to_state, trans.condition, priority_str, delay_str, cooldown_str]
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		label.add_theme_font_size_override("font_size", 10)
 		trans_item.add_child(label)
 		
+		# Edit button
+		var edit_btn = Button.new()
+		edit_btn.text = "✏"
+		edit_btn.flat = true
+		edit_btn.custom_minimum_size = Vector2(28, 24)
+		edit_btn.tooltip_text = "Edit this transition"
+		var idx = i  # capture for lambda
+		edit_btn.pressed.connect(func(): _edit_transition(idx))
+		trans_item.add_child(edit_btn)
+		
+		# Remove button
 		var remove_btn = Button.new()
-		remove_btn.text = "X"
+		remove_btn.text = "×"
+		remove_btn.flat = true
+		remove_btn.custom_minimum_size = Vector2(24, 24)
 		remove_btn.pressed.connect(func():
-			transitions.erase(trans)
+			transitions.remove_at(idx)
 			refresh_transitions_display()
 			state_data_changed.emit()
 		)
@@ -361,6 +391,89 @@ func refresh_transitions_display():
 	
 	# Update transition counter badge in title
 	_update_transition_badge()
+
+func _edit_transition(index: int):
+	if index < 0 or index >= transitions.size():
+		return
+	
+	var trans = transitions[index]
+	
+	# Load the transition dialog
+	var TransitionDialogClass = load("res://addons/omnistate_ai/ui/transition_dialog.gd")
+	var dlg = TransitionDialogClass.new()
+	add_child(dlg)
+	
+	# Populate with all states — we need the parent graph to get state names
+	# Build a simple list from the parent graph_edit
+	var state_names: Array = []
+	var graph = _find_graph_edit()
+	if graph:
+		for node in graph.get_children():
+			if node is OmniStateNode:
+				state_names.append(node.get_state_name())
+	
+	# Manually populate the dropdowns since we don't have OmniStateNode refs here
+	dlg.from_state_option.clear()
+	dlg.to_state_option.clear()
+	dlg.from_state_option.add_item("[ANY]")
+	dlg.to_state_option.add_item("[ANY]")
+	for sn in state_names:
+		dlg.from_state_option.add_item(sn)
+		dlg.to_state_option.add_item(sn)
+	
+	# Pre-select from = this state, to = trans.to_state
+	var my_name = get_state_name()
+	for i in range(dlg.from_state_option.item_count):
+		if dlg.from_state_option.get_item_text(i) == my_name:
+			dlg.from_state_option.selected = i
+			break
+	for i in range(dlg.to_state_option.item_count):
+		if dlg.to_state_option.get_item_text(i) == trans.to_state:
+			dlg.to_state_option.selected = i
+			break
+	
+	# Fill in all fields
+	dlg.condition_input.text = trans.get("condition", "")
+	dlg.priority_input.value = trans.get("priority", 10)
+	dlg.delay_input.value = trans.get("delay", 0.0)
+	dlg.cooldown_input.value = trans.get("cooldown", 0.0)
+	dlg.interrupt_check.button_pressed = trans.get("can_interrupt", true)
+	dlg.blend_input.value = trans.get("blend_time", 0.0)
+	dlg.custom_code_input.text = trans.get("custom_code", "")
+	dlg.debug_log_check.button_pressed = trans.get("debug_log", false)
+	dlg.debug_label_input.text = trans.get("debug_label", "")
+	
+	dlg.confirmed.connect(func():
+		var data = dlg.get_transition_data()
+		# Replace the entry at index in-place
+		transitions[index] = {
+			"to_state": data.to_state,
+			"condition": data.condition,
+			"priority": data.priority,
+			"delay": data.delay,
+			"cooldown": data.cooldown,
+			"can_interrupt": data.can_interrupt,
+			"blend_time": data.blend_time,
+			"custom_code": data.custom_code,
+			"debug_log": data.debug_log,
+			"debug_label": data.debug_label,
+		}
+		refresh_transitions_display()
+		state_data_changed.emit()
+		dlg.queue_free()
+	)
+	dlg.canceled.connect(func(): dlg.queue_free())
+	dlg.close_requested.connect(func(): dlg.queue_free())
+	dlg.popup_centered()
+
+func _find_graph_edit() -> GraphEdit:
+	# Walk up the tree to find the GraphEdit that contains this node
+	var p = get_parent()
+	while p:
+		if p is GraphEdit:
+			return p
+		p = p.get_parent()
+	return null
 
 func _update_transition_badge():
 	"""Update the transition counter badge in the titlebar"""
