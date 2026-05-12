@@ -1254,7 +1254,27 @@ func _on_save_pressed():
 	if states.is_empty():
 		_show_notification("No states to save!")
 		return
-	
+		
+	var dir_path = "res://ai_states/" + fsm_script_name + "/"
+	if DirAccess.dir_exists_absolute(dir_path):
+		var confirm = ConfirmationDialog.new()
+		confirm.title = "Warning: Overwrite Files"
+		confirm.dialog_text = "Do you want to proceed?\n\nThis action will overwrite your state files.\nYour manual edits inside state update/enter functions may be lost.\n\nPlease click 'Sync from Files' first to save manual edits."
+		confirm.get_ok_button().text = "Proceed with generation"
+		
+		confirm.confirmed.connect(func():
+			_execute_generation(states)
+			confirm.queue_free()
+		)
+		confirm.canceled.connect(func():
+			confirm.queue_free()
+		)
+		add_child(confirm)
+		confirm.popup_centered()
+	else:
+		_execute_generation(states)
+
+func _execute_generation(states: Array):
 	# Save the graph configuration first
 	_save_graph_to_file()
 	
