@@ -552,20 +552,73 @@ func _on_add_transition_pressed():
 	transition_dialog.popup_centered()
 
 func _on_transition_confirmed():
-	var from_state = transition_dialog.from_state_option.get_item_text(transition_dialog.from_state_option.selected)
-	var to_state = transition_dialog.to_state_option.get_item_text(transition_dialog.to_state_option.selected)
-	var condition = transition_dialog.condition_input.text
-	
-	# Find the from_state node and add the transition
+	var data = transition_dialog.get_transition_data()
+	var from_state = data.from_state
+	var to_state = data.to_state
+
+	var settings = {
+		"priority":      data.priority,
+		"delay":         data.delay,
+		"cooldown":      data.cooldown,
+		"can_interrupt": data.can_interrupt,
+		"blend_time":    data.blend_time,
+		"custom_code":   data.custom_code,
+		"debug_log":     data.debug_log,
+		"debug_label":   data.debug_label,
+	}
+
+	if from_state == "[ANY]":
+		# Add this transition to every state node (except the target itself)
+		var added = 0
+		var skipped = 0
+		for node in graph_edit.get_children():
+			if not (node is OmniStateNode):
+				continue
+			if node.get_state_name() == to_state:
+				continue  # skip self-loop on the target
+			# Skip if this state already has a transition to the target
+			var already_has = false
+			for t in node.transitions:
+				if t.to_state == to_state:
+					already_has = true
+					break
+			if already_has:
+				skipped += 1
+				continue
+			node.add_transition_condition(to_state, data.condition, settings)
+			# Visual connection from each state to the target
+			var to_node_name = _find_state_node_by_name(to_state)
+			if to_node_name != "" and node.name != to_node_name:
+				var already_connected = false
+				for conn in graph_edit.get_connection_list():
+					if conn.from_node == node.name and conn.to_node == to_node_name:
+						already_connected = true
+						break
+				if not already_connected:
+					graph_edit.connect_node(node.name, 0, to_node_name, 0)
+			added += 1
+		has_unsaved_changes = true
+		var msg = "✓ [ANY] → %s added to %d states!" % [to_state, added]
+		if skipped > 0:
+			msg += "\n(%d already had this transition, skipped)" % skipped
+		_show_notification(msg)
+		return
+
+	# Normal single-state transition
 	for node in graph_edit.get_children():
 		if node is OmniStateNode and node.get_state_name() == from_state:
-			node.add_transition_condition(to_state, condition)
-			
-			# Create visual connection
+			# Check for duplicate transition (same from→to already exists)
+			for i in range(node.transitions.size()):
+				if node.transitions[i].to_state == to_state:
+					# Duplicate found — show warning with edit option
+					_show_duplicate_connection_dialog(node.name, _find_state_node_by_name(to_state))
+					return
+			node.add_transition_condition(to_state, data.condition, settings)
 			var from_node_name = node.name
 			var to_node_name = _find_state_node_by_name(to_state)
 			if to_node_name != "":
 				graph_edit.connect_node(from_node_name, 0, to_node_name, 0)
+			has_unsaved_changes = true
 			break
 
 func _find_state_node_by_name(state_name: String) -> String:
@@ -575,51 +628,126 @@ func _find_state_node_by_name(state_name: String) -> String:
 	return ""
 
 func _on_connection_request(from_node: StringName, from_port: int, to_node: StringName, to_port: int):
+	# Check for duplicate visual connection
+	for conn in graph_edit.get_connection_list():
+		if conn.from_node == from_node and conn.to_node == to_node:
+			# Already connected — show duplicate warning
+			_show_duplicate_connection_dialog(from_node, to_node)
+			return
+
 	# Create visual connection
 	graph_edit.connect_node(from_node, from_port, to_node, to_port)
-	
-	# Mark as changed
 	has_unsaved_changes = true
-	
-	# Open dialog to add condition
+
 	var from_state_node = graph_edit.get_node(NodePath(from_node))
 	var to_state_node = graph_edit.get_node(NodePath(to_node))
-	
+
 	if from_state_node is OmniStateNode and to_state_node is OmniStateNode:
 		_prompt_for_transition_condition(from_state_node, to_state_node)
-		
-		# Highlight the connection briefly to show direction
 		_highlight_connection(from_node, to_node)
 
-func _prompt_for_transition_condition(from_state: OmniStateNode, to_state: OmniStateNode):
-	var dialog = AcceptDialog.new()
-	dialog.title = "Transition Condition"
-	dialog.min_size = Vector2(400, 200)
-	
-	var vbox = VBoxContainer.new()
-	dialog.add_child(vbox)
-	
-	var label = Label.new()
-	label.text = "Condition for transition from '%s' to '%s':" % [from_state.get_state_name(), to_state.get_state_name()]
-	vbox.add_child(label)
-	
-	var input = LineEdit.new()
-	input.placeholder_text = "e.g., player_detected, health < 30, timer > 5.0"
-	vbox.add_child(input)
-	
-	var examples = Label.new()
-	examples.text = "Examples:\n• player_in_range\n• health <= 20\n• can_see_player and not is_reloading"
-	examples.add_theme_font_size_override("font_size", 10)
-	vbox.add_child(examples)
-	
-	dialog.confirmed.connect(func():
-		if input.text != "":
-			from_state.add_transition_condition(to_state.get_state_name(), input.text)
-		dialog.queue_free()
+func _show_duplicate_connection_dialog(from_node: StringName, to_node: StringName):
+	"""Warn the user about a duplicate connection and offer to edit the existing transition."""
+	var from_state = graph_edit.get_node(NodePath(from_node))
+	var to_state   = graph_edit.get_node(NodePath(to_node))
+	if not (from_state is OmniStateNode and to_state is OmniStateNode):
+		return
+
+	var from_name = from_state.get_state_name()
+	var to_name   = to_state.get_state_name()
+
+	# Find the existing transition index on the from_state node
+	var existing_idx = -1
+	for i in range(from_state.transitions.size()):
+		if from_state.transitions[i].to_state == to_name:
+			existing_idx = i
+			break
+
+	var dlg = Window.new()
+	dlg.title = "Duplicate Connection"
+	dlg.size = Vector2i(420, 180)
+	dlg.transient = true
+	dlg.exclusive = true
+	add_child(dlg)
+
+	var vb = VBoxContainer.new()
+	vb.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vb.set_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 16)
+	dlg.add_child(vb)
+
+	var lbl = Label.new()
+	lbl.text = "A connection from  \"%s\"  →  \"%s\"  already exists." % [from_name, to_name]
+	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	vb.add_child(lbl)
+
+	if existing_idx >= 0:
+		var trans = from_state.transitions[existing_idx]
+		var info = Label.new()
+		info.text = "Condition: %s   [Priority: %d]" % [trans.get("condition", "(none)"), trans.get("priority", 10)]
+		info.add_theme_color_override("font_color", Color.YELLOW)
+		info.add_theme_font_size_override("font_size", 11)
+		vb.add_child(info)
+
+	vb.add_child(HSeparator.new())
+
+	var btn_row = HBoxContainer.new()
+	btn_row.alignment = BoxContainer.ALIGNMENT_END
+	vb.add_child(btn_row)
+
+	var btn_ok = Button.new()
+	btn_ok.text = "OK  (keep existing)"
+	btn_ok.pressed.connect(func():
+		dlg.queue_free()
 	)
-	
-	add_child(dialog)
-	dialog.popup_centered()
+	btn_row.add_child(btn_ok)
+
+	if existing_idx >= 0:
+		var btn_edit = Button.new()
+		btn_edit.text = "✏ Edit existing transition"
+		btn_edit.modulate = Color(0.5, 1.0, 0.8)
+		btn_edit.pressed.connect(func():
+			dlg.queue_free()
+			_open_transition_editor(from_state, existing_idx)
+		)
+		btn_row.add_child(btn_edit)
+
+	dlg.close_requested.connect(func(): dlg.queue_free())
+	dlg.popup_centered()
+
+func _prompt_for_transition_condition(from_state: OmniStateNode, to_state: OmniStateNode):
+	# Use a fresh dialog instance so it never conflicts with the toolbar → Transition button
+	var dlg = preload("res://addons/omnistate_ai/ui/transition_dialog.gd").new()
+	add_child(dlg)
+	dlg.setup_with_states(_get_all_state_nodes())
+
+	# Pre-select the correct from/to states
+	for i in range(dlg.from_state_option.item_count):
+		if dlg.from_state_option.get_item_text(i) == from_state.get_state_name():
+			dlg.from_state_option.selected = i
+			break
+	for i in range(dlg.to_state_option.item_count):
+		if dlg.to_state_option.get_item_text(i) == to_state.get_state_name():
+			dlg.to_state_option.selected = i
+			break
+
+	dlg.confirmed.connect(func():
+		var data = dlg.get_transition_data()
+		from_state.add_transition_condition(to_state.get_state_name(), data.condition, {
+			"priority": data.priority,
+			"delay": data.delay,
+			"cooldown": data.cooldown,
+			"can_interrupt": data.can_interrupt,
+			"blend_time": data.blend_time,
+			"custom_code": data.custom_code,
+			"debug_log": data.debug_log,
+			"debug_label": data.debug_label,
+		})
+		has_unsaved_changes = true
+		dlg.queue_free()
+	)
+	dlg.canceled.connect(func(): dlg.queue_free())
+	dlg.close_requested.connect(func(): dlg.queue_free())
+	dlg.popup_centered()
 
 func _on_disconnection_request(from_node: StringName, from_port: int, to_node: StringName, to_port: int):
 	graph_edit.disconnect_node(from_node, from_port, to_node, to_port)
@@ -945,7 +1073,8 @@ func _on_show_connections_pressed():
 		list.add_child(state_header)
 		
 		# List transitions
-		for trans in state.transitions:
+		for trans_idx in range(state.transitions.size()):
+			var trans = state.transitions[trans_idx]
 			var trans_container = HBoxContainer.new()
 			list.add_child(trans_container)
 			
@@ -956,28 +1085,44 @@ func _on_show_connections_pressed():
 			
 			var to_label = Label.new()
 			to_label.text = "TO: " + trans.to_state
-			to_label.custom_minimum_size.x = 150
+			to_label.custom_minimum_size.x = 120
 			to_label.add_theme_color_override("font_color", Color(0.7, 0.9, 1.0))
 			trans_container.add_child(to_label)
 			
 			var condition_label = Label.new()
 			condition_label.text = "WHEN: " + trans.condition
+			condition_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			condition_label.add_theme_color_override("font_color", Color.YELLOW)
 			trans_container.add_child(condition_label)
 			
-			# Highlight button
-			var highlight_btn = Button.new()
-			highlight_btn.text = "👁 Show"
-			highlight_btn.custom_minimum_size.x = 80
-			highlight_btn.pressed.connect(func():
+			# Show button — highlights the connection in the graph
+			var show_btn = Button.new()
+			show_btn.text = "👁"
+			show_btn.flat = true
+			show_btn.custom_minimum_size = Vector2(28, 24)
+			show_btn.tooltip_text = "Highlight connection in graph"
+			show_btn.pressed.connect(func():
 				var from_node_name = state.name
 				var to_node_name = _find_state_node_by_name(trans.to_state)
 				if to_node_name != "":
 					_highlight_connection(from_node_name, to_node_name)
-					# Also scroll to show both nodes
 					_focus_on_nodes([state.name, to_node_name])
 			)
-			trans_container.add_child(highlight_btn)
+			trans_container.add_child(show_btn)
+			
+			# Edit button — opens full transition dialog pre-filled
+			var edit_btn = Button.new()
+			edit_btn.text = "✏"
+			edit_btn.flat = true
+			edit_btn.custom_minimum_size = Vector2(28, 24)
+			edit_btn.tooltip_text = "Edit this transition"
+			var captured_state = state
+			var captured_idx = trans_idx
+			edit_btn.pressed.connect(func():
+				dialog.queue_free()
+				_open_transition_editor(captured_state, captured_idx)
+			)
+			trans_container.add_child(edit_btn)
 		
 		list.add_child(HSeparator.new())
 	
@@ -994,6 +1139,68 @@ func _on_show_connections_pressed():
 	
 	add_child(dialog)
 	dialog.popup_centered()
+
+func _open_transition_editor(state: OmniStateNode, trans_idx: int):
+	"""Open the full transition dialog pre-filled for editing an existing transition."""
+	if trans_idx < 0 or trans_idx >= state.transitions.size():
+		return
+	var trans = state.transitions[trans_idx]
+
+	var dlg = preload("res://addons/omnistate_ai/ui/transition_dialog.gd").new()
+	add_child(dlg)
+
+	# Populate dropdowns with all state names
+	var all_states = _get_all_state_nodes()
+	dlg.from_state_option.clear()
+	dlg.to_state_option.clear()
+	dlg.from_state_option.add_item("[ANY]")
+	dlg.to_state_option.add_item("[ANY]")
+	for s in all_states:
+		dlg.from_state_option.add_item(s.get_state_name())
+		dlg.to_state_option.add_item(s.get_state_name())
+
+	# Pre-select from = this state, to = trans.to_state
+	for i in range(dlg.from_state_option.item_count):
+		if dlg.from_state_option.get_item_text(i) == state.get_state_name():
+			dlg.from_state_option.selected = i
+			break
+	for i in range(dlg.to_state_option.item_count):
+		if dlg.to_state_option.get_item_text(i) == trans.to_state:
+			dlg.to_state_option.selected = i
+			break
+
+	# Fill all fields from existing transition data
+	dlg.condition_input.text        = trans.get("condition", "")
+	dlg.priority_input.value        = trans.get("priority", 10)
+	dlg.delay_input.value           = trans.get("delay", 0.0)
+	dlg.cooldown_input.value        = trans.get("cooldown", 0.0)
+	dlg.interrupt_check.button_pressed = trans.get("can_interrupt", true)
+	dlg.blend_input.value           = trans.get("blend_time", 0.0)
+	dlg.custom_code_input.text      = trans.get("custom_code", "")
+	dlg.debug_log_check.button_pressed = trans.get("debug_log", false)
+	dlg.debug_label_input.text      = trans.get("debug_label", "")
+
+	dlg.confirmed.connect(func():
+		var data = dlg.get_transition_data()
+		state.transitions[trans_idx] = {
+			"to_state":      data.to_state,
+			"condition":     data.condition,
+			"priority":      data.priority,
+			"delay":         data.delay,
+			"cooldown":      data.cooldown,
+			"can_interrupt": data.can_interrupt,
+			"blend_time":    data.blend_time,
+			"custom_code":   data.custom_code,
+			"debug_log":     data.debug_log,
+			"debug_label":   data.debug_label,
+		}
+		state.refresh_transitions_display()
+		has_unsaved_changes = true
+		dlg.queue_free()
+	)
+	dlg.canceled.connect(func(): dlg.queue_free())
+	dlg.close_requested.connect(func(): dlg.queue_free())
+	dlg.popup_centered()
 
 func _focus_on_nodes(node_names: Array):
 	"""Center the view on specific nodes"""
@@ -1084,6 +1291,25 @@ func _on_recover_pressed():
 	_try_auto_recover_from_files()
 
 func _save_graph_to_file():
+	# Build a map from node internal name → state name for connection serialization
+	var node_to_state: Dictionary = {}
+	for node in graph_edit.get_children():
+		if node is OmniStateNode:
+			node_to_state[node.name] = node.get_state_name()
+
+	# Convert connections to use state names instead of internal node names
+	var connections_by_state = []
+	for conn in graph_edit.get_connection_list():
+		var from_state = node_to_state.get(conn.from_node, "")
+		var to_state = node_to_state.get(conn.to_node, "")
+		if from_state != "" and to_state != "":
+			connections_by_state.append({
+				"from_state": from_state,
+				"to_state": to_state,
+				"from_port": conn.from_port,
+				"to_port": conn.to_port,
+			})
+
 	var save_data = {
 		"fsm_script_name": fsm_script_name,
 		"base_class_name": base_class_name,
@@ -1091,9 +1317,9 @@ func _save_graph_to_file():
 		"player_scene_path": player_scene_path,
 		"animation_player_path": animation_player_path,
 		"detected_animations": detected_animations,
-		"blackboard_vars": blackboard_vars.duplicate(),  # Save blackboard variables
+		"blackboard_vars": blackboard_vars.duplicate(),
 		"states": [],
-		"connections": graph_edit.get_connection_list()
+		"connections": connections_by_state
 	}
 	
 	# Save all state nodes
@@ -1210,7 +1436,9 @@ func _load_graph_from_file():
 		graph_edit.add_child(new_state)
 		
 		# Restore state data
-		new_state.state_name_input.text = state_data.get("name", "state")
+		var state_name = state_data.get("name", "state")
+		new_state.state_name_input.text = state_name
+		new_state.title = state_name if state_name != "" else "New State"
 		new_state.is_initial_state_check.button_pressed = state_data.get("is_initial", false)
 		
 		# Restore color - handle different formats
@@ -1262,13 +1490,20 @@ func _load_graph_from_file():
 	# Wait for nodes to be added
 	await get_tree().process_frame
 	
-	# Restore connections
+	# Restore connections using state names → node names via the map built above
 	for connection in save_data.get("connections", []):
-		var from_node = connection.get("from_node", "")
-		var to_node = connection.get("to_node", "")
+		# Support both old format (from_node/to_node) and new format (from_state/to_state)
+		var from_node: String
+		var to_node: String
+		if connection.has("from_state"):
+			from_node = node_name_map.get(connection.get("from_state", ""), "")
+			to_node = node_name_map.get(connection.get("to_state", ""), "")
+		else:
+			# Legacy: try to map old internal names via state name lookup
+			from_node = node_name_map.get(connection.get("from_node", ""), connection.get("from_node", ""))
+			to_node = node_name_map.get(connection.get("to_node", ""), connection.get("to_node", ""))
 		var from_port = connection.get("from_port", 0)
 		var to_port = connection.get("to_port", 0)
-		
 		if from_node != "" and to_node != "":
 			graph_edit.connect_node(from_node, from_port, to_node, to_port)
 	
@@ -1609,6 +1844,7 @@ func _try_auto_recover_from_files():
 		
 		# Set state data
 		new_state.state_name_input.text = state_data.name
+		new_state.title = state_data.name if state_data.name != "" else "New State"
 		new_state.enter_code_input.text = state_data.enter_code
 		new_state.code_input.text = state_data.update_code
 		new_state.exit_code_input.text = state_data.exit_code
