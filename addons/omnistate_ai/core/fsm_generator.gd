@@ -133,11 +133,48 @@ static func _generate_main_fsm(
 	code += "func _check_transitions():\n"
 	code += "\tif not current_state:\n"
 	code += "\t\treturn\n\n"
+	code += "\tvar now = Time.get_ticks_msec() / 1000.0\n"
 	code += "\tvar transitions = current_state.get_transitions()\n"
+	code += "\t# Sort by priority (lower number = higher priority)\n"
+	code += "\ttransitions.sort_custom(func(a, b): return a.get(\"priority\", 10) < b.get(\"priority\", 10))\n"
 	code += "\tfor transition in transitions:\n"
+	code += "\t\t# Cooldown check\n"
+	code += "\t\tvar cooldown_key = \"_cd_\" + transition.to_state\n"
+	code += "\t\tvar last_fire = blackboard.get_value(cooldown_key) if blackboard.has_value(cooldown_key) else 0.0\n"
+	code += "\t\tvar cooldown = transition.get(\"cooldown\", 0.0)\n"
+	code += "\t\tif cooldown > 0.0 and now - last_fire < cooldown:\n"
+	code += "\t\t\tcontinue\n"
 	code += "\t\tif _evaluate_condition(transition.condition):\n"
+	code += "\t\t\t# Delay check\n"
+	code += "\t\t\tvar delay = transition.get(\"delay\", 0.0)\n"
+	code += "\t\t\tvar delay_key = \"_delay_\" + transition.to_state\n"
+	code += "\t\t\tif delay > 0.0:\n"
+	code += "\t\t\t\tif not blackboard.has_value(delay_key):\n"
+	code += "\t\t\t\t\tblackboard.set_value(delay_key, now)\n"
+	code += "\t\t\t\t\tcontinue\n"
+	code += "\t\t\t\telif now - blackboard.get_value(delay_key) < delay:\n"
+	code += "\t\t\t\t\tcontinue\n"
+	code += "\t\t\t# Fire transition\n"
+	code += "\t\t\tblackboard.set_value(cooldown_key, now)\n"
+	code += "\t\t\tif blackboard.has_value(delay_key):\n"
+	code += "\t\t\t\tblackboard.set_value(delay_key, null)\n"
+	code += "\t\t\t# Custom code on transition\n"
+	code += "\t\t\tvar custom = transition.get(\"custom_code\", \"\")\n"
+	code += "\t\t\tif custom != \"\":\n"
+	code += "\t\t\t\tvar expr = Expression.new()\n"
+	code += "\t\t\t\tif expr.parse(custom) == OK:\n"
+	code += "\t\t\t\t\texpr.execute([], self)\n"
+	code += "\t\t\t# Debug log\n"
+	code += "\t\t\tif transition.get(\"debug_log\", false):\n"
+	code += "\t\t\t\tvar lbl = transition.get(\"debug_label\", \"\")\n"
+	code += "\t\t\t\tprint(\"[FSM] \", lbl if lbl != \"\" else (get_current_state_name() + \" → \" + transition.to_state))\n"
 	code += "\t\t\tchange_state(transition.to_state)\n"
-	code += "\t\t\tbreak\n\n"
+	code += "\t\t\tbreak\n"
+	code += "\t\telse:\n"
+	code += "\t\t\t# Reset delay timer if condition is no longer true\n"
+	code += "\t\t\tvar delay_key = \"_delay_\" + transition.to_state\n"
+	code += "\t\t\tif blackboard.has_value(delay_key):\n"
+	code += "\t\t\t\tblackboard.set_value(delay_key, null)\n\n"
 	
 	# Evaluate condition
 	code += "func _evaluate_condition(condition: String) -> bool:\n"
@@ -235,7 +272,24 @@ static func _generate_state_script(dir_path: String, node, all_nodes: Array, con
 	code += "func get_transitions() -> Array:\n"
 	code += "\treturn [\n"
 	for trans in node.transitions:
-		code += "\t\t{\"to_state\": \"" + trans.to_state + "\", \"condition\": \"" + trans.condition + "\"},\n"
+		var priority = trans.get("priority", 10)
+		var delay = trans.get("delay", 0.0)
+		var cooldown = trans.get("cooldown", 0.0)
+		var can_interrupt = trans.get("can_interrupt", true)
+		var blend_time = trans.get("blend_time", 0.0)
+		var custom_code = trans.get("custom_code", "").replace("\"", "\\\"").replace("\n", "\\n")
+		var debug_log = trans.get("debug_log", false)
+		var debug_label = trans.get("debug_label", "").replace("\"", "\\\"")
+		code += "\t\t{\"to_state\": \"" + trans.to_state + "\", \"condition\": \"" + trans.condition + "\""
+		code += ", \"priority\": " + str(priority)
+		code += ", \"delay\": " + str(delay)
+		code += ", \"cooldown\": " + str(cooldown)
+		code += ", \"can_interrupt\": " + str(can_interrupt).to_lower()
+		code += ", \"blend_time\": " + str(blend_time)
+		code += ", \"custom_code\": \"" + custom_code + "\""
+		code += ", \"debug_log\": " + str(debug_log).to_lower()
+		code += ", \"debug_label\": \"" + debug_label + "\""
+		code += "},\n"
 	code += "\t]\n\n"
 	
 	# Enter function
