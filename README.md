@@ -2,19 +2,20 @@
 
 **Version 1.0.2** | **Released: May 8, 2026** | **Updated: May 12, 2026** | **Godot 4.6.x**
 
-OmniState Visual FSM is a visual state machine editor for Godot 4.6.x. It combines a simple node-based interface with a robust transition system, blackboard variables, animation blending, and automatic recovery features.
+OmniState Visual FSM is a visual state machine editor for Godot 4.6.x. It combines a simple node-based interface with a robust transition system, blackboard variables, animation blending and other features.
 
 ## Highlights
 
 - Visual state machine editor with drag-and-drop workflow
-- Transition system with cooldowns, delays, blending, and custom code
-- Auto-save, auto-load, and recovery from generated code
+- Add behaviours and states
 - Sync between visual editor and generated .gd files
 - Merge preserves custom functions and properties
 - Blackboard variables for shared AI state
 - Animation detection and playback integration
 - State templates for faster behavior creation
 - Clean code generation with type hints and organized structure
+- Auto-save, auto-load, and recovery from generated code
+- Transition system with cooldowns, delays, blending, and custom code
 
 
 ## Installation
@@ -36,7 +37,10 @@ OmniState Visual FSM is a visual state machine editor for Godot 4.6.x. It combin
 - `FEATURES.md` — full feature breakdown, including transition system and blackboard usage
 - `EXAMPLES.md` — example state machines
 - `CHANGELOG.md` — version history
-- `RELEASE_NOTES_v1.0.1.md` — release notes
+- `CHANGELOG.md` — version history
+- `DOCUMENTATION.md` — version history
+
+
 
 ---
 
