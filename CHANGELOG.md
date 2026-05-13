@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [1.0.2] - 2026-05-12
+
+### 🐛 Critical Bug Fixes
+- **CRITICAL FIX**:  I upgraded the _generate_main_fsm function. Before, it was blindly deleting and recreating the main FSM script from scratch. Now, before it generates the new file, it reads the existing one, actively searches for any custom functions or custom variables, saves them in memory, and safely injects them at the bottom of the newly generated script!
+- Now, whenever you click the "Generate Code" button, it checks to see if the FSM directory and files already exist. If they do, it will immediately pause and show a pop-up dialog that says: "Warning: Overwrite Files" "Do you want to proceed? This action will overwrite your state files. Your manual edits inside state update/enter functions may be lost. Please click 'Sync from Files' first to save manual edits."
+
+### ✨ New Features 
+
+- new confirmation window whenever you click the "Generate Code" button, it checks to see if the FSM directory and files already exist which should prevent blind code overwriting.
+
+  
 
 ## [1.0.1] - 2026-05-09
 
